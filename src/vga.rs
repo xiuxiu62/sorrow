@@ -60,11 +60,15 @@ struct Char {
 }
 
 impl Char {
-    pub fn blank(color_code: ColorCode) -> Self {
+    pub fn new(ascii_char: u8, color_code: ColorCode) -> Self {
         Self {
-            ascii_char: b' ',
+            ascii_char,
             color_code,
         }
+    }
+
+    pub fn blank(color_code: ColorCode) -> Self {
+        Self::new(b' ', color_code)
     }
 }
 
@@ -93,19 +97,8 @@ impl Writer {
         match byte {
             b'\n' => self.new_line(),
             byte => {
-                if self.column_position >= BUFFER_WIDTH {
-                    self.new_line();
-                }
-
-                let row = BUFFER_HEIGHT - 1;
-                let col = self.column_position;
-
-                let color_code = self.color_code;
-                self.buffer.video_mem[row][col].write(Char {
-                    ascii_char: byte,
-                    color_code,
-                });
-                self.column_position += 1;
+                self.put_byte(byte);
+                // self.increment_column();
             }
         }
     }
@@ -116,36 +109,82 @@ impl Writer {
     /// support strings with non-ASCII characters, since they can't be printed in the VGA text
     /// mode.
     fn write_string(&mut self, s: &str) {
-        for byte in s.bytes() {
-            match byte {
-                // printable ASCII byte or newline
-                0x20..=0x7e | b'\n' => self.write_byte(byte),
-                // not part of printable ASCII range
-                _ => self.write_byte(0xfe),
-            }
-        }
+        s.bytes().into_iter().for_each(|byte| match byte {
+            // printable ASCII byte or newline
+            0x20..=0x7e | b'\n' => self.write_byte(byte),
+            // not part of printable ASCII range
+            _ => self.write_byte(0xfe),
+        });
     }
 
-    fn get_char(&mut self, row: usize, col: usize) -> Char {
+    fn make_char(&self, ascii_char: u8) -> Char {
+        Char::new(ascii_char, self.color_code)
+    }
+
+    fn get_char_at(&mut self, row: usize, col: usize) -> Char {
         self.buffer.video_mem[row][col].read()
     }
 
-    fn put_char(&mut self, c: Char, row: usize, col: usize) {
+    fn get_char(&mut self) -> Char {
+        self.get_char_at(self.row_position, self.column_position)
+    }
+
+    fn put_char_at(&mut self, c: Char, row: usize, col: usize) {
         self.buffer.video_mem[row][col].write(c);
+    }
+
+    fn put_char(&mut self, c: Char) {
+        self.put_char_at(c, self.row_position, self.column_position);
         self.increment_column();
     }
 
-    /// Shifts all lines one line up and clears the last row.
+    fn put_byte(&mut self, byte: u8) {
+        let char = self.make_char(byte);
+        self.put_char(char);
+    }
+
+    /// Sets the buffer row to the next line, shifting the buffer up if it is at the end.
     fn new_line(&mut self) {
-        for row in 1..BUFFER_HEIGHT {
-            for col in 0..BUFFER_WIDTH {
-                let character = self.get_char(row, col);
-                self.put_char(character, row - 1, col);
-            }
+        if self.row_position == BUFFER_HEIGHT {
+            self.shift_buffer();
+            self.column_position = 0;
+            self.row_position -= 1;
+            return;
         }
-        self.clear_row(BUFFER_HEIGHT - 1);
+
         self.column_position = 0;
+        self.row_position += 1;
+    }
+
+    /// Shifts all lines one line up and clears the last row.
+    fn shift_buffer(&mut self) {
+        (1..BUFFER_HEIGHT).into_iter().for_each(|row| {
+            (0..BUFFER_WIDTH).into_iter().for_each(|col| {
+                let char = self.get_char_at(row, col);
+                self.put_char_at(char, row - 1, col);
+            })
+        });
+
+        self.clear_row(BUFFER_HEIGHT - 1);
         self.row_position -= 1;
+    }
+
+    /// Shifts the buffer n times.
+    fn shift_buffer_n(&mut self, n: usize) {
+        (0..n).into_iter().for_each(|_| self.shift_buffer());
+    }
+
+    /// Fills the buffer with blank characters.
+    fn clear_screen(&mut self) {
+        (0..BUFFER_HEIGHT).into_iter().for_each(|row| {
+            (0..BUFFER_WIDTH).into_iter().for_each(|col| {
+                let char = Char::blank(self.color_code);
+                self.put_char_at(char, row, col);
+            })
+        });
+
+        self.column_position = 0;
+        self.row_position = 0;
     }
 
     /// Clears a row by overwriting it with blank characters.
@@ -153,23 +192,40 @@ impl Writer {
         let blank = Char::blank(self.color_code);
         (0..BUFFER_WIDTH)
             .into_iter()
-            .for_each(|col| self.put_char(blank, row, col));
+            .for_each(|col| self.put_char_at(blank, row, col));
     }
 
+    /// Clears the character at the previous position in the buffer.
     fn clear_last(&mut self) {
-        self.put_char(
-            Char::blank(self.color_code),
-            self.row_position,
-            self.column_position,
-        );
+        if self.column_position == 0 {
+            if self.row_position == 0 {
+                // Do nothing if we are at [0][0]
+                return;
+            }
+
+            // Go to the end of the previous row if we are at the beginning of the current one
+            self.column_position = BUFFER_WIDTH;
+            self.row_position -= 1;
+            self.clear_current();
+            return;
+        }
+
+        self.column_position -= 1;
+        self.clear_current();
     }
-    
+
+    /// Sets the current buffer position to a blank Char
+    fn clear_current(&mut self) {
+        let char = Char::blank(self.color_code);
+        self.put_char(char);
+    }
+
     fn increment_column(&mut self) {
-        if self.column_position > BUFFER_WIDTH {
+        if self.column_position >= BUFFER_WIDTH {
             self.new_line();
             return;
         }
-        
+
         self.column_position += 1;
     }
 }
@@ -225,7 +281,7 @@ fn test_println_output() {
     let s = "Some test string that fits on a single line";
     println!("{}", s);
     for (i, c) in s.chars().enumerate() {
-        let screen_char = WRITER.lock().get_char(BUFFER_WIDTH - 2, i);
+        let screen_char = WRITER.lock().get_char_at(BUFFER_WIDTH - 2, i);
         assert_eq!(char::from(screen_char.ascii_char), c);
     }
 }
