@@ -12,6 +12,7 @@ lazy_static! {
     /// Used by the `print!` and `println!` macros.
     pub static ref WRITER: Mutex<Writer> = Mutex::new(Writer {
         column_position: 0,
+        row_position: 0,
         color_code: ColorCode::new(Color::White, Color::Black),
         buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
     });
@@ -58,6 +59,15 @@ struct Char {
     color_code: ColorCode,
 }
 
+impl Char {
+    pub fn blank(color_code: ColorCode) -> Self {
+        Self {
+            ascii_char: b' ',
+            color_code,
+        }
+    }
+}
+
 /// A structure representing the VGA text buffer.
 #[repr(transparent)]
 pub struct Buffer {
@@ -70,6 +80,7 @@ pub struct Buffer {
 /// `core::fmt::Write` trait.
 pub struct Writer {
     column_position: usize,
+    row_position: usize,
     color_code: ColorCode,
     buffer: &'static mut Buffer,
 }
@@ -115,27 +126,41 @@ impl Writer {
         }
     }
 
+    fn get_char(&mut self, row: usize, col: usize) -> Char {
+        self.buffer.video_mem[row][col].read()
+    }
+
+    fn put_char(&mut self, c: Char, row: usize, col: usize) {
+        self.buffer.video_mem[row][col].write(c);
+    }
+
     /// Shifts all lines one line up and clears the last row.
     fn new_line(&mut self) {
         for row in 1..BUFFER_HEIGHT {
             for col in 0..BUFFER_WIDTH {
-                let character = self.buffer.video_mem[row][col].read();
-                self.buffer.video_mem[row - 1][col].write(character);
+                let character = self.get_char(row, col);
+                self.put_char(character, row - 1, col);
             }
         }
         self.clear_row(BUFFER_HEIGHT - 1);
         self.column_position = 0;
+        self.row_position -= 1;
     }
 
     /// Clears a row by overwriting it with blank characters.
     fn clear_row(&mut self, row: usize) {
-        let blank = Char {
-            ascii_char: b' ',
-            color_code: self.color_code,
-        };
-        for col in 0..BUFFER_WIDTH {
-            self.buffer.video_mem[row][col].write(blank);
-        }
+        let blank = Char::blank(self.color_code);
+        (0..BUFFER_WIDTH)
+            .into_iter()
+            .for_each(|col| self.put_char(blank, row, col));
+    }
+
+    fn clear_last(&mut self) {
+        self.put_char(
+            Char::blank(self.color_code),
+            self.row_position,
+            self.column_position,
+        );
     }
 }
 
@@ -159,11 +184,25 @@ macro_rules! println {
     ($($arg:tt)*) => ($crate::print!("{}\n", format_args!($($arg)*)));
 }
 
+/// Clears the last printed char in the vga buffer
+#[macro_export]
+macro_rules! clear_last {
+    () => {
+        $crate::vga::_clear_last()
+    };
+}
+
 /// Prints the given formatted string to the VGA text buffer through the global `WRITER` instance.
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
     use core::fmt::Write;
     WRITER.lock().write_fmt(args).unwrap();
+}
+
+/// Clears the last printed char in the buffer
+#[doc(hidden)]
+pub fn _clear_last() {
+    WRITER.lock().clear_last();
 }
 
 #[test_case]
@@ -172,18 +211,11 @@ fn test_println_simple() {
 }
 
 #[test_case]
-fn test_println_many() {
-    for _ in 0..200 {
-        println!("test_println_many output");
-    }
-}
-
-#[test_case]
 fn test_println_output() {
     let s = "Some test string that fits on a single line";
     println!("{}", s);
     for (i, c) in s.chars().enumerate() {
-        let screen_char = WRITER.lock().buffer.chars[BUFFER_HEIGHT - 2][i].read();
-        assert_eq!(char::from(screen_char.ascii_character), c);
+        let screen_char = WRITER.lock().get_char(BUFFER_WIDTH - 2, i);
+        assert_eq!(char::from(screen_char.ascii_char), c);
     }
 }

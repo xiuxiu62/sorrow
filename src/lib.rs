@@ -19,6 +19,12 @@ pub fn init() {
     interrupts::init_idt();
     println!("Interrupt descriptor table: [ok]");
 
+    unsafe { interrupts::PICS.lock().initialize() };
+    println!("Programmable interrupt controller: [ok]");
+
+    x86_64::instructions::interrupts::enable();
+    println!("Enable interrupts: [ok]");
+
     println!();
 }
 
