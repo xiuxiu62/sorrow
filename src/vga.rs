@@ -132,6 +132,7 @@ impl Writer {
 
     fn put_char(&mut self, c: Char, row: usize, col: usize) {
         self.buffer.video_mem[row][col].write(c);
+        self.increment_column();
     }
 
     /// Shifts all lines one line up and clears the last row.
@@ -161,6 +162,15 @@ impl Writer {
             self.row_position,
             self.column_position,
         );
+    }
+    
+    fn increment_column(&mut self) {
+        if self.column_position > BUFFER_WIDTH {
+            self.new_line();
+            return;
+        }
+        
+        self.column_position += 1;
     }
 }
 
