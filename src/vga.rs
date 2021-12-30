@@ -89,6 +89,7 @@ pub struct Writer {
     buffer: &'static mut Buffer,
 }
 
+#[allow(dead_code)]
 impl Writer {
     /// Writes an ASCII byte to the buffer.
     ///
@@ -98,6 +99,12 @@ impl Writer {
             b'\n' => self.new_line(),
             byte => {
                 self.put_byte(byte);
+                if self.row_position == BUFFER_HEIGHT - 1
+                    && self.column_position == BUFFER_WIDTH - 1
+                {
+                    self.new_line();
+                }
+
                 // self.increment_column();
             }
         }
@@ -143,9 +150,18 @@ impl Writer {
         self.put_char(char);
     }
 
+    fn put_char_color_at(&mut self, c: u8, color_code: ColorCode, row: usize, col: usize) {
+        let char = Char::new(c, color_code);
+        self.put_char_at(char, row, col);
+    }
+
+    fn put_char_color(&mut self, c: u8, color_code: ColorCode) {
+        self.put_char_color_at(c, color_code, self.row_position, self.column_position);
+    }
+
     /// Sets the buffer row to the next line, shifting the buffer up if it is at the end.
     fn new_line(&mut self) {
-        if self.row_position == BUFFER_HEIGHT {
+        if self.row_position == BUFFER_HEIGHT - 1 {
             self.shift_buffer();
             self.column_position = 0;
             self.row_position -= 1;
@@ -174,6 +190,29 @@ impl Writer {
         (0..n).into_iter().for_each(|_| self.shift_buffer());
     }
 
+    fn increment_column(&mut self) {
+        if self.column_position == BUFFER_WIDTH - 1 {
+            self.new_line();
+            return;
+        };
+
+        self.column_position += 1;
+    }
+
+    fn decrement_column(&mut self) {
+        if self.column_position == 0 {
+            if self.row_position == 0 {
+                return;
+            }
+
+            self.column_position = BUFFER_WIDTH - 1;
+            self.row_position -= 1;
+            return;
+        }
+
+        self.column_position -= 1;
+    }
+
     /// Fills the buffer with blank characters.
     fn clear_screen(&mut self) {
         (0..BUFFER_HEIGHT).into_iter().for_each(|row| {
@@ -197,36 +236,30 @@ impl Writer {
 
     /// Clears the character at the previous position in the buffer.
     fn clear_last(&mut self) {
-        if self.column_position == 0 {
-            if self.row_position == 0 {
-                // Do nothing if we are at [0][0]
-                return;
-            }
-
-            // Go to the end of the previous row if we are at the beginning of the current one
-            self.column_position = BUFFER_WIDTH;
-            self.row_position -= 1;
-            self.clear_current();
-            return;
-        }
-
-        self.column_position -= 1;
+        self.decrement_column();
         self.clear_current();
+
+        // if self.column_position == 0 {
+        //     if self.row_position == 0 {
+        //         // Do nothing if we are at [0][0]
+        //         return;
+        //     }
+
+        //     // Go to the end of the previous row if we are at the beginning of the current one
+        //     self.column_position = BUFFER_WIDTH;
+        //     self.row_position -= 1;
+        //     self.clear_current();
+        //     return;
+        // }
+
+        // self.column_position -= 1;
+        // self.clear_current();
     }
 
     /// Sets the current buffer position to a blank Char
     fn clear_current(&mut self) {
         let char = Char::blank(self.color_code);
         self.put_char(char);
-    }
-
-    fn increment_column(&mut self) {
-        if self.column_position >= BUFFER_WIDTH {
-            self.new_line();
-            return;
-        }
-
-        self.column_position += 1;
     }
 }
 

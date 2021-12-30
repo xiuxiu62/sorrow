@@ -14,16 +14,16 @@ pub mod vga;
 
 pub fn init() {
     gdt::init();
-    println!("Global descriptor table: [ok]");
+    println!("[ok] Global descriptor table");
 
     interrupts::init_idt();
-    println!("Interrupt descriptor table: [ok]");
+    println!("[ok] Interrupt descriptor table");
 
     unsafe { interrupts::PICS.lock().initialize() };
-    println!("Programmable interrupt controller: [ok]");
+    println!("[ok] Programmable interrupt controller");
 
     x86_64::instructions::interrupts::enable();
-    println!("Enable interrupts: [ok]");
+    println!("[ok] Enable interrupts");
 
     println!();
 }
