@@ -1,4 +1,8 @@
-use core::fmt;
+use core::{
+    fmt,
+    ops::{Deref, DerefMut},
+};
+
 use lazy_static::lazy_static;
 use spin::Mutex;
 use volatile::Volatile;
@@ -69,6 +73,21 @@ impl Char {
 
     pub fn blank(color_code: ColorCode) -> Self {
         Self::new(b' ', color_code)
+    }
+}
+
+impl Deref for Char {
+    type Target = Char;
+
+    fn deref(&self) -> &Self::Target {
+        self
+    }
+}
+
+impl DerefMut for Char {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self {
+        self
     }
 }
 
