@@ -45,6 +45,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "sorrow"
+version = "0.1.0"
+dependencies = [
+ "bootloader",
+ "lazy_static",
+ "pc-keyboard",
+ "pic8259",
+ "spin",
+ "uart_16550",
+ "volatile 0.2.7",
+ "x86_64",
+]
+
+[[package]]
 name = "spin"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -71,20 +85,6 @@ name = "volatile"
 version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e4c2dbd44eb8b53973357e6e207e370f0c1059990df850aca1eca8947cf464f0"
-
-[[package]]
-name = "vonnegut"
-version = "0.1.0"
-dependencies = [
- "bootloader",
- "lazy_static",
- "pc-keyboard",
- "pic8259",
- "spin",
- "uart_16550",
- "volatile 0.2.7",
- "x86_64",
-]
 
 [[package]]
 name = "x86_64"

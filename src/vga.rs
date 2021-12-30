@@ -161,14 +161,12 @@ impl Writer {
 
     /// Sets the buffer row to the next line, shifting the buffer up if it is at the end.
     fn new_line(&mut self) {
+        self.column_position = 0;
         if self.row_position == BUFFER_HEIGHT - 1 {
             self.shift_buffer();
-            self.column_position = 0;
-            self.row_position -= 1;
             return;
         }
 
-        self.column_position = 0;
         self.row_position += 1;
     }
 
@@ -182,7 +180,6 @@ impl Writer {
         });
 
         self.clear_row(BUFFER_HEIGHT - 1);
-        self.row_position -= 1;
     }
 
     /// Shifts the buffer n times.

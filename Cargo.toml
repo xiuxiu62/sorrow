@@ -1,10 +1,10 @@
 [package]
-name = "vonnegut"
+name = "sorrow"
 version = "0.1.0"
 edition = "2021"
 
 [lib]
-name = "lib_vonnegut"
+name = "lib_sorrow"
 path = "src/lib.rs"
 
 [[test]]
@@ -27,7 +27,7 @@ features = ["spin_no_std"]
 
 [package.metadata.bootimage]
 build-command = ["build"] 
-run-command = ["qemu-system-x86_64", "-drive", "format=raw,file=target/x86_64-vonnegut/debug/bootimage-vonnegut.bin"]
+run-command = ["qemu-system-x86_64", "-drive", "format=raw,file=target/x86_64-sorrow/debug/bootimage-sorrow.bin"]
 test-args = [
     "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-serial", "stdio",
     "-display", "none"
@@ -35,4 +35,4 @@ test-args = [
 test-success-exit-code = 33 
 
 [package.metadata.cargo-xbuild]
-target = "x86_64-vonnegut.json"
+target = "x86_64-sorrow.json"

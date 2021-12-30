@@ -17,7 +17,7 @@ run:
 	cargo run --release
 
 test:
-	cargo xtest -- --target x86_64-vonnegut.json
+	cargo xtest -- --target x86_64-sorrow.json
 
 clean:
 	cargo clean

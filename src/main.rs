@@ -1,15 +1,15 @@
 #![no_std]
 #![no_main]
 #![feature(custom_test_frameworks)]
-#![test_runner(lib_vonnegut::test_runner)]
+#![test_runner(lib_sorrow::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
 use core::panic::PanicInfo;
-use lib_vonnegut::println;
+use lib_sorrow::println;
 
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    lib_vonnegut::init();
+    lib_sorrow::init();
 
     #[cfg(test)]
     test_main();
@@ -28,7 +28,7 @@ fn panic(info: &PanicInfo) -> ! {
 #[cfg(test)]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    lib_vonnegut::test_panic_handler(info)
+    lib_sorrow::test_panic_handler(info)
 }
 
 #[test_case]
