@@ -9,8 +9,8 @@ use core::panic::PanicInfo;
 
 entry_point!(kernel_main);
 
-fn kernel_main(_boot_info: &'static BootInfo) -> ! {
-    lib_sorrow::init();
+fn kernel_main(boot_info: &'static BootInfo) -> ! {
+    lib_sorrow::init(boot_info);
 
     #[cfg(test)]
     test_main();

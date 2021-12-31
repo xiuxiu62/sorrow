@@ -5,14 +5,17 @@
 #![feature(abi_x86_interrupt)]
 #![reexport_test_harness_main = "test_main"]
 
+use bootloader::BootInfo;
 use core::panic::PanicInfo;
+use x86_64::{structures::paging::Page, VirtAddr};
 
 pub mod gdt;
 pub mod interrupts;
+pub mod memory;
 pub mod serial;
 pub mod vga;
 
-pub fn init() {
+pub fn init(boot_info: &'static BootInfo) {
     gdt::init();
     println!("[ok] Global descriptor table");
 
@@ -21,6 +24,19 @@ pub fn init() {
 
     unsafe { interrupts::PICS.lock().initialize() };
     println!("[ok] Programmable interrupt controller");
+
+    let phys_mem_offset = VirtAddr::new(boot_info.physical_memory_offset);
+    let mut mapper = unsafe { memory::init(phys_mem_offset) };
+    let mut frame_allocator =
+        unsafe { memory::BootInfoFrameAllocator::init(&boot_info.memory_map) };
+
+    // map an unused page
+    let page = Page::containing_address(VirtAddr::new(0xdeadbeaf000));
+    memory::create_example_mapping(page, &mut mapper, &mut frame_allocator);
+
+    // write the string `New!` to the screen through the new mapping
+    let page_ptr: *mut u64 = page.start_address().as_mut_ptr();
+    unsafe { page_ptr.offset(400).write_volatile(0x_f021_f077_f065_f04e) };
 
     x86_64::instructions::interrupts::enable();
     println!("[ok] Enable interrupts");
@@ -80,22 +96,23 @@ pub fn hlt_loop() -> ! {
     }
 }
 
-#[cfg(test)]
-use bootloader::{entry_point, BootInfo};
-
-#[cfg(test)]
-entry_point!(test_kernel_main);
-
 /// Entry point for `cargo xtest`
 #[cfg(test)]
-fn test_kernel_main(_boot_info: &'static BootInfo) -> ! {
-    init();
+fn test_kernel_main(boot_info: &'static BootInfo) -> ! {
+    init(boot_info);
     test_main();
     hlt_loop();
 }
 
 #[cfg(test)]
-#[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
-    test_panic_handler(info)
+mod tests {
+    use super::{test_kernel_main, test_panic_handler, PanicInfo};
+    use bootloader::entry_point;
+
+    entry_point!(test_kernel_main);
+
+    #[panic_handler]
+    fn panic(info: &PanicInfo) -> ! {
+        test_panic_handler(info)
+    }
 }
