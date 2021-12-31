@@ -274,8 +274,7 @@ impl Writer {
 
     /// Sets the current buffer position to a blank Char
     fn clear_current(&mut self) {
-        let char = Char::blank(self.color_code);
-        self.put_char(char);
+        self.put_char(Char::blank(self.color_code));
     }
 }
 

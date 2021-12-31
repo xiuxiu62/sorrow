@@ -4,25 +4,28 @@
 #![test_runner(lib_sorrow::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
+use bootloader::{entry_point, BootInfo};
 use core::panic::PanicInfo;
-use lib_sorrow::println;
 
-#[no_mangle]
-pub extern "C" fn _start() -> ! {
+entry_point!(kernel_main);
+
+fn kernel_main(_boot_info: &'static BootInfo) -> ! {
     lib_sorrow::init();
 
     #[cfg(test)]
     test_main();
 
-    println!("Hello world :)");
-    loop {}
+    lib_sorrow::hlt_loop();
 }
+
+#[cfg(not(test))]
+use lib_sorrow::println;
 
 #[cfg(not(test))]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     println!("{info}");
-    loop {}
+    lib_sorrow::hlt_loop();
 }
 
 #[cfg(test)]
