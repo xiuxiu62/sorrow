@@ -16,6 +16,7 @@ pub mod allocator;
 pub mod gdt;
 pub mod interrupts;
 pub mod memory;
+pub mod process;
 pub mod serial;
 pub mod task;
 pub mod vga;

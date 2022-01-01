@@ -1,4 +1,4 @@
-use crate::{clear_last, print, println};
+use crate::{print, println, vga};
 use conquer_once::spin::OnceCell;
 use core::{
     pin::Pin,
@@ -9,7 +9,7 @@ use futures_util::{
     stream::{Stream, StreamExt},
     task::AtomicWaker,
 };
-use pc_keyboard::{layouts, DecodedKey, HandleControl, Keyboard, ScancodeSet1};
+use pc_keyboard::{layouts, DecodedKey, HandleControl, KeyCode, Keyboard, ScancodeSet1};
 
 static SCANCODE_QUEUE: OnceCell<ArrayQueue<u8>> = OnceCell::uninit();
 static WAKER: AtomicWaker = AtomicWaker::new();
@@ -71,12 +71,26 @@ pub async fn handle_keypresses() {
     while let Some(scancode) = scancodes.next().await {
         if let Ok(Some(key_event)) = keyboard.add_byte(scancode) {
             if let Some(key) = keyboard.process_keyevent(key_event) {
-                match key {
-                    DecodedKey::Unicode(character) => print!("{}", character),
-                    DecodedKey::RawKey(pc_keyboard::KeyCode::Backspace) => clear_last!(),
-                    DecodedKey::RawKey(key) => print!("{:?}", key),
-                }
+                handle_keypress(key).await;
             }
         }
+    }
+}
+
+async fn handle_keypress(key: DecodedKey) {
+    match key {
+        DecodedKey::Unicode(key) => match key {
+            '\n' => vga::newline(),
+            '\t' => vga::tabline(),
+            '\u{8}' => vga::clear_last(),
+            _ => print!("{key}"),
+        },
+        DecodedKey::RawKey(key) => match key {
+            KeyCode::ArrowLeft => vga::move_cursor(vga::Direction::Left),
+            KeyCode::ArrowRight => vga::move_cursor(vga::Direction::Right),
+            KeyCode::ArrowUp => vga::move_cursor(vga::Direction::Up),
+            KeyCode::ArrowDown => vga::move_cursor(vga::Direction::Down),
+            _ => print!("{:?}", key),
+        },
     }
 }

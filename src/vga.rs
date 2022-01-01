@@ -1,5 +1,5 @@
 use core::{
-    fmt,
+    fmt::{self, Write},
     ops::{Deref, DerefMut},
 };
 
@@ -127,6 +127,8 @@ impl Writer {
                 // self.increment_column();
             }
         }
+
+        self.increment_column();
     }
 
     /// Writes the given ASCII string to the buffer.
@@ -161,7 +163,6 @@ impl Writer {
 
     fn put_char(&mut self, c: Char) {
         self.put_char_at(c, self.row_position, self.column_position);
-        self.increment_column();
     }
 
     fn put_byte(&mut self, byte: u8) {
@@ -204,6 +205,22 @@ impl Writer {
     /// Shifts the buffer n times.
     fn shift_buffer_n(&mut self, n: usize) {
         (0..n).into_iter().for_each(|_| self.shift_buffer());
+    }
+
+    fn increment_row(&mut self) {
+        if self.row_position == BUFFER_HEIGHT - 1 {
+            return;
+        }
+
+        self.row_position += 1;
+    }
+
+    fn decrement_row(&mut self) {
+        if self.row_position == 0 {
+            return;
+        }
+
+        self.row_position -= 1;
     }
 
     fn increment_column(&mut self) {
@@ -254,22 +271,6 @@ impl Writer {
     fn clear_last(&mut self) {
         self.decrement_column();
         self.clear_current();
-
-        // if self.column_position == 0 {
-        //     if self.row_position == 0 {
-        //         // Do nothing if we are at [0][0]
-        //         return;
-        //     }
-
-        //     // Go to the end of the previous row if we are at the beginning of the current one
-        //     self.column_position = BUFFER_WIDTH;
-        //     self.row_position -= 1;
-        //     self.clear_current();
-        //     return;
-        // }
-
-        // self.column_position -= 1;
-        // self.clear_current();
     }
 
     /// Sets the current buffer position to a blank Char
@@ -298,25 +299,46 @@ macro_rules! println {
     ($($arg:tt)*) => ($crate::print!("{}\n", format_args!($($arg)*)));
 }
 
-/// Clears the last printed char in the vga buffer
-#[macro_export]
-macro_rules! clear_last {
-    () => {
-        $crate::vga::_clear_last()
-    };
-}
-
 /// Prints the given formatted string to the VGA text buffer through the global `WRITER` instance.
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
-    use core::fmt::Write;
     WRITER.lock().write_fmt(args).unwrap();
+}
+
+/// An extraordinarily sinful method, i know
+#[doc(hidden)]
+pub fn newline() {
+    WRITER.lock().new_line();
+}
+
+/// An extraordinarily sinful method, i know
+#[doc(hidden)]
+pub fn tabline() {
+    WRITER.lock().write_fmt(format_args!("  ")).unwrap();
 }
 
 /// Clears the last printed char in the buffer
 #[doc(hidden)]
-pub fn _clear_last() {
+pub fn clear_last() {
     WRITER.lock().clear_last();
+}
+
+pub enum Direction {
+    Left,
+    Right,
+    Up,
+    Down,
+}
+
+/// Handles arrow keys, moving the cursor to the appropriate buffer position
+#[doc(hidden)]
+pub fn move_cursor(direction: Direction) {
+    match direction {
+        Direction::Left => WRITER.lock().decrement_column(),
+        Direction::Right => WRITER.lock().increment_column(),
+        Direction::Up => WRITER.lock().decrement_row(),
+        Direction::Down => WRITER.lock().increment_row(),
+    }
 }
 
 #[test_case]
