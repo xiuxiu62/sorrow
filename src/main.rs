@@ -13,8 +13,11 @@ use lib_sorrow::{
     self, allocator,
     memory::{self, BootInfoFrameAllocator},
     println,
+    task::{executor::Executor, keyboard, Task},
 };
 use x86_64::VirtAddr;
+
+static TASK_QUEUE_SIZE: usize = 100;
 
 entry_point!(kernel_main);
 
@@ -25,34 +28,26 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     let mut mapper = unsafe { memory::init(physical_memory_offset) };
     let mut frame_allocator = unsafe { BootInfoFrameAllocator::init(&boot_info.memory_map) };
 
-    if let Err(err) = allocator::init_heap(&mut mapper, &mut frame_allocator) {
-        println!("Error: {err:?}");
-        lib_sorrow::hlt_loop();
-    };
-
-    // allocate something on the heap
-
-    let heap_value_1 = Box::new(vec![420, 421, 422, 423, 424]);
-    let heap_value_2 = Box::new(69);
-    core::mem::drop(heap_value_2);
-
-    let rc_value = Rc::new(heap_value_1.leak());
-    let cloned_rc_value = rc_value.clone();
-    println!(
-        "current reference count: {}",
-        Rc::strong_count(&cloned_rc_value)
-    );
-
-    core::mem::drop(rc_value);
-    println!(
-        "current reference count: {}",
-        Rc::strong_count(&cloned_rc_value)
-    );
+    allocator::init_heap(&mut mapper, &mut frame_allocator).expect("Error: {err:?}");
 
     #[cfg(test)]
     test_main();
 
-    lib_sorrow::hlt_loop();
+    let mut executor = Executor::new(TASK_QUEUE_SIZE);
+    executor.spawn(Task::new(example_task()));
+    executor.spawn(Task::new(keyboard::handle_keypresses()));
+    executor.run();
+}
+
+// fn stage_1()
+
+async fn async_number() -> u32 {
+    42
+}
+
+async fn example_task() {
+    let number = async_number().await;
+    println!("async number: {}", number);
 }
 
 #[cfg(not(test))]
