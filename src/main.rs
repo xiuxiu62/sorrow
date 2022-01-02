@@ -13,7 +13,8 @@ use lib_sorrow::{
     self, allocator,
     memory::{self, BootInfoFrameAllocator},
     println,
-    task::{executor::Executor, keyboard, Task},
+    task::{executor::Executor, Task},
+    vga::keyboard,
 };
 use x86_64::VirtAddr;
 
@@ -39,10 +40,8 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     executor.run();
 }
 
-// fn stage_1()
-
 async fn async_number() -> u32 {
-    42
+    42 * 10
 }
 
 async fn example_task() {
