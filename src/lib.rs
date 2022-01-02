@@ -10,7 +10,7 @@
 extern crate alloc;
 
 use bootloader::BootInfo;
-use core::panic::PanicInfo;
+use core::{arch::asm, panic::PanicInfo};
 
 pub mod allocator;
 pub mod gdt;
@@ -26,6 +26,10 @@ pub fn init(_boot_info: &'static BootInfo) {
     interrupts::init_idt();
     unsafe { interrupts::PICS.lock().initialize() };
     interrupts::enable();
+    // unsafe {
+    //     asm!("outb(0x3D4, 0x0A)");
+    //     asm!("outb(0x3D5, 0x20)");
+    // }
 }
 
 pub trait Testable {

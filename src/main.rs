@@ -6,7 +6,7 @@
 
 extern crate alloc;
 
-use alloc::{boxed::Box, rc::Rc, vec, vec::Vec};
+use alloc::vec;
 use bootloader::{entry_point, BootInfo};
 use core::panic::PanicInfo;
 use lib_sorrow::{
@@ -35,8 +35,17 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     test_main();
 
     let mut executor = Executor::new(TASK_QUEUE_SIZE);
-    executor.spawn(Task::new(example_task()));
-    executor.spawn(Task::new(keyboard::handle_keypresses()));
+    let tasks = vec![
+        Task::new(example_task()),
+        Task::new(keyboard::handle_keypresses()),
+    ];
+
+    tasks.into_iter().for_each(|task| {
+        if let Err(task_id) = executor.spawn(task) {
+            panic!("Task {task_id} failed to execute")
+        }
+    });
+
     executor.run();
 }
 
