@@ -1,13 +1,11 @@
+use crate::io::outb;
 use core::{
     fmt::{self, Write},
     ops::{Deref, DerefMut},
 };
-
 use lazy_static::lazy_static;
 use spin::Mutex;
 use volatile::Volatile;
-
-pub mod keyboard;
 
 const BUFFER_WIDTH: usize = 80;
 const BUFFER_HEIGHT: usize = 25;
@@ -120,17 +118,9 @@ impl Writer {
             b'\n' => self.new_line(),
             byte => {
                 self.put_byte(byte);
-                if self.row_position == BUFFER_HEIGHT - 1
-                    && self.column_position == BUFFER_WIDTH - 1
-                {
-                    self.new_line();
-                }
-
-                // self.increment_column();
+                self.increment_column();
             }
         }
-
-        self.increment_column();
     }
 
     /// Writes the given ASCII string to the buffer.
@@ -248,6 +238,16 @@ impl Writer {
         self.column_position -= 1;
     }
 
+    fn update_cursor(&self) {
+        let position = self.row_position * BUFFER_WIDTH + self.column_position;
+        unsafe {
+            outb(0x3d4, 0x0f);
+            outb(0x3d5, (position as u8 & 0xff) as u8);
+            outb(0x3d4, 0x0e);
+            outb(0x3d5, ((position >> 8) as u8 & 0xff) as u8);
+        }
+    }
+
     /// Fills the buffer with blank characters.
     fn clear_screen(&mut self) {
         (0..BUFFER_HEIGHT).into_iter().for_each(|row| {
@@ -291,7 +291,7 @@ impl fmt::Write for Writer {
 /// Like the `print!` macro in the standard library, but prints to the VGA text buffer.
 #[macro_export]
 macro_rules! print {
-    ($($arg:tt)*) => ($crate::vga::_print(format_args!($($arg)*)));
+    ($($arg:tt)*) => ($crate::graphics::vga::_print(format_args!($($arg)*)));
 }
 
 /// Like the `println!` macro in the standard library, but prints to the VGA text buffer.
@@ -304,25 +304,33 @@ macro_rules! println {
 /// Prints the given formatted string to the VGA text buffer through the global `WRITER` instance.
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
-    WRITER.lock().write_fmt(args).unwrap();
+    let mut w = WRITER.lock();
+    w.write_fmt(args).unwrap();
+    w.update_cursor();
 }
 
 /// An extraordinarily sinful method, i know
 #[doc(hidden)]
 pub fn newline() {
-    WRITER.lock().new_line();
+    let mut w = WRITER.lock();
+    w.new_line();
+    w.update_cursor();
 }
 
 /// An extraordinarily sinful method, i know
 #[doc(hidden)]
 pub fn tabline() {
-    WRITER.lock().write_fmt(format_args!("  ")).unwrap();
+    let mut w = WRITER.lock();
+    w.write_fmt(format_args!("  ")).unwrap();
+    w.update_cursor();
 }
 
 /// Clears the last printed char in the buffer
 #[doc(hidden)]
 pub fn clear_last() {
-    WRITER.lock().clear_last();
+    let mut w = WRITER.lock();
+    w.clear_last();
+    w.update_cursor();
 }
 
 pub enum Direction {
@@ -335,12 +343,14 @@ pub enum Direction {
 /// Handles arrow keys, moving the cursor to the appropriate buffer position
 #[doc(hidden)]
 pub fn move_cursor(direction: Direction) {
+    let mut w = WRITER.lock();
     match direction {
-        Direction::Left => WRITER.lock().decrement_column(),
-        Direction::Right => WRITER.lock().increment_column(),
-        Direction::Up => WRITER.lock().decrement_row(),
-        Direction::Down => WRITER.lock().increment_row(),
+        Direction::Left => w.decrement_column(),
+        Direction::Right => w.increment_column(),
+        Direction::Up => w.decrement_row(),
+        Direction::Down => w.increment_row(),
     }
+    w.update_cursor();
 }
 
 #[test_case]

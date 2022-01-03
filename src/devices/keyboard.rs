@@ -1,4 +1,4 @@
-use crate::{print, println, vga};
+use crate::{graphics::vga, print, println};
 use conquer_once::spin::OnceCell;
 use core::{
     pin::Pin,

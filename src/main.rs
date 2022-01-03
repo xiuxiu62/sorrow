@@ -11,10 +11,10 @@ use bootloader::{entry_point, BootInfo};
 use core::panic::PanicInfo;
 use lib_sorrow::{
     self, allocator,
+    devices::keyboard,
     memory::{self, BootInfoFrameAllocator},
     println,
     task::{executor::Executor, Task},
-    vga::keyboard,
 };
 use x86_64::VirtAddr;
 

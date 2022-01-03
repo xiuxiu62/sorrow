@@ -12,15 +12,16 @@ extern crate alloc;
 use bootloader::BootInfo;
 use core::panic::PanicInfo;
 
-pub mod io;
 pub mod allocator;
+pub mod devices;
 pub mod gdt;
+pub mod graphics;
 pub mod interrupts;
+pub mod io;
 pub mod memory;
 pub mod process;
 pub mod serial;
 pub mod task;
-pub mod vga;
 
 pub fn init(_boot_info: &'static BootInfo) {
     gdt::init();

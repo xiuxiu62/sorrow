@@ -5,9 +5,11 @@ all:
 	make release
 
 build:
+	make clean
 	cargo bootimage
 
 release:
+	make clean
 	cargo bootimage --release
 
 debug:
