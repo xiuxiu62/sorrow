@@ -20,10 +20,7 @@ impl TaskWaker {
     }
 
     fn create_waker(task_id: TaskId, task_queue: TaskQueue) -> Waker {
-        Waker::from(Arc::new(Self {
-            task_id,
-            task_queue,
-        }))
+        Waker::from(Arc::new(Self::new(task_id, task_queue)))
     }
 
     fn wake_task(&self) -> Result<(), TaskId> {

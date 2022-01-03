@@ -360,33 +360,33 @@ fn test_println_simple() {
 
 #[cfg(test)]
 mod tests {
-    use super::{BUFFER_HEIGHT, WRITER};
+    // use super::{BUFFER_HEIGHT, WRITER};
 
-    #[test_case]
-    fn test_println() {
-        println!("test_println output");
-    }
+    // #[test_case]
+    // fn test_println() {
+    //     println!("test_println output");
+    // }
 
-    #[test_case]
-    fn test_println_many() {
-        for _ in 0..200 {
-            println!("test_println_many output");
-        }
-    }
+    // #[test_case]
+    // fn test_println_many() {
+    //     for _ in 0..200 {
+    //         println!("test_println_many output");
+    //     }
+    // }
 
-    #[test_case]
-    fn test_println_output() {
-        use core::fmt::Write;
-        use x86_64::instructions::interrupts;
+    // #[test_case]
+    // fn test_println_output() {
+    //     use core::fmt::Write;
+    //     use x86_64::instructions::interrupts;
 
-        let s = "Some test string that fits on a single line";
-        interrupts::without_interrupts(|| {
-            let mut writer = WRITER.lock();
-            writeln!(writer, "\n{}", s).expect("writeln failed");
-            for (i, c) in s.chars().enumerate() {
-                let char = writer.get_char_at(BUFFER_HEIGHT - 2, i);
-                assert_eq!(char::from(char.ascii_char), c);
-            }
-        });
-    }
+    //     let s = "Some test string that fits on a single line";
+    //     interrupts::without_interrupts(|| {
+    //         let mut writer = WRITER.lock();
+    //         writeln!(writer, "\n{}", s).expect("writeln failed");
+    //         for (i, c) in s.chars().enumerate() {
+    //             let char = writer.get_char_at(BUFFER_HEIGHT - 2, i);
+    //             assert_eq!(char::from(char.ascii_char), c);
+    //         }
+    //     });
+    // }
 }

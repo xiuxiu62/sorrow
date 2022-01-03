@@ -4,13 +4,14 @@
 #![feature(abi_x86_interrupt)]
 #![feature(alloc_error_handler)]
 #![feature(const_mut_refs)]
-#![test_runner(crate::test_runner)]
+#![test_runner(test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
 extern crate alloc;
 
 use bootloader::BootInfo;
 use core::panic::PanicInfo;
+use x86_64::instructions;
 
 pub mod allocator;
 pub mod devices;
@@ -19,7 +20,7 @@ pub mod graphics;
 pub mod interrupts;
 pub mod io;
 pub mod memory;
-pub mod process;
+// pub mod process;
 pub mod serial;
 pub mod task;
 
@@ -27,7 +28,13 @@ pub fn init(_boot_info: &'static BootInfo) {
     gdt::init();
     interrupts::init_idt();
     unsafe { interrupts::PICS.lock().initialize() };
-    interrupts::enable();
+    interrupts::enable_and_hlt();
+}
+
+pub fn hlt_loop() -> ! {
+    loop {
+        instructions::hlt();
+    }
 }
 
 pub trait Testable {
@@ -76,20 +83,14 @@ pub fn exit_qemu(exit_code: QemuExitCode) {
     }
 }
 
-pub fn hlt_loop() -> ! {
-    loop {
-        x86_64::instructions::hlt();
-    }
-}
-
 #[alloc_error_handler]
 fn alloc_error_handler(layout: alloc::alloc::Layout) -> ! {
     panic!("Alloc error: {layout:?}")
 }
 
-/// Entry point for `cargo xtest`
+/// Entry point for `cargo ktest`
 #[cfg(test)]
-fn test_kernel_main(boot_info: &'static BootInfo) -> ! {
+fn test_kernel_main(boot_info: &'static mut BootInfo) -> ! {
     init(boot_info);
     test_main();
     hlt_loop();

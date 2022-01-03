@@ -1,9 +1,9 @@
-use crate::{gdt, println};
+use crate::{devices::keyboard, gdt, io, println};
 use lazy_static::lazy_static;
 use pic8259::ChainedPics;
 use spin;
 use x86_64::{
-    instructions::interrupts,
+    instructions::{self, interrupts},
     structures::idt::{InterruptDescriptorTable, InterruptStackFrame},
 };
 
@@ -80,11 +80,8 @@ extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: InterruptStackFr
 }
 
 extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: InterruptStackFrame) {
-    use x86_64::instructions::port::Port;
-
-    let mut port = Port::new(0x60);
-    let scancode: u8 = unsafe { port.read() };
-    crate::devices::keyboard::add_scancode(scancode);
+    let scancode: u8 = unsafe { io::insb(0x60) };
+    keyboard::add_scancode(scancode);
 
     unsafe {
         PICS.lock()
@@ -94,5 +91,5 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: InterruptStac
 
 #[test_case]
 fn test_breakpoint_exception() {
-    x86_64::instructions::interrupts::int3();
+    interrupts::int3();
 }

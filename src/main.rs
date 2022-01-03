@@ -16,29 +16,29 @@ use lib_sorrow::{
     println,
     task::{executor::Executor, Task},
 };
-use x86_64::VirtAddr;
 
 static TASK_QUEUE_SIZE: usize = 100;
 
 entry_point!(kernel_main);
 
-fn kernel_main(boot_info: &'static BootInfo) -> ! {
+fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     lib_sorrow::init(boot_info);
-
-    let physical_memory_offset = VirtAddr::new(boot_info.physical_memory_offset);
-    let mut mapper = unsafe { memory::init(physical_memory_offset) };
-    let mut frame_allocator = unsafe { BootInfoFrameAllocator::init(&boot_info.memory_map) };
-
-    allocator::init_heap(&mut mapper, &mut frame_allocator).expect("Error: {err:?}");
 
     #[cfg(test)]
     test_main();
 
+    let physical_memory_offset = match memory::try_get_physical_memory_offset(boot_info) {
+        Ok(offset) => offset,
+        Err(err) => panic!("{err}"),
+    };
+
+    let mut mapper = unsafe { memory::init(physical_memory_offset) };
+    let mut frame_allocator = unsafe { BootInfoFrameAllocator::init(&boot_info.memory_regions) };
+
+    allocator::init_heap(&mut mapper, &mut frame_allocator).expect("Error: {err:?}");
+
     let mut executor = Executor::new(TASK_QUEUE_SIZE);
-    let tasks = vec![
-        Task::new(example_task()),
-        Task::new(keyboard::handle_keypresses()),
-    ];
+    let tasks = vec![Task::new(keyboard::handle_keypresses())];
 
     tasks.into_iter().for_each(|task| {
         if let Err(task_id) = executor.spawn(task) {
@@ -46,21 +46,15 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
         }
     });
 
+    println!("Successfully loaded kernel");
+
     executor.run();
-}
-
-async fn async_number() -> u32 {
-    42 * 10
-}
-
-async fn example_task() {
-    let number = async_number().await;
-    println!("async number: {}", number);
 }
 
 #[cfg(not(test))]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
+    println!("KERNEL PANIC:");
     println!("{info}");
     lib_sorrow::hlt_loop();
 }
