@@ -9,7 +9,6 @@
 
 extern crate alloc;
 
-use bootloader::BootInfo;
 use core::panic::PanicInfo;
 use x86_64::instructions;
 
@@ -24,7 +23,7 @@ pub mod memory;
 pub mod serial;
 pub mod task;
 
-pub fn init(_boot_info: &'static BootInfo) {
+pub fn init() {
     gdt::init();
     interrupts::init_idt();
     unsafe { interrupts::PICS.lock().initialize() };
@@ -88,10 +87,12 @@ fn alloc_error_handler(layout: alloc::alloc::Layout) -> ! {
     panic!("Alloc error: {layout:?}")
 }
 
+#[cfg(test)]
+use bootloader::BootInfo;
+
 /// Entry point for `cargo ktest`
 #[cfg(test)]
-fn test_kernel_main(boot_info: &'static mut BootInfo) -> ! {
-    init(boot_info);
+fn test_kernel_main(_boot_info: &'static mut BootInfo) -> ! {
     test_main();
     hlt_loop();
 }

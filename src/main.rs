@@ -22,33 +22,40 @@ static TASK_QUEUE_SIZE: usize = 100;
 entry_point!(kernel_main);
 
 fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
-    lib_sorrow::init(boot_info);
+    // lib_sorrow::init();
+
+    // turn the screen gray
+    if let Some(framebuffer) = boot_info.framebuffer.as_mut() {
+        for byte in framebuffer.buffer_mut() {
+            *byte = 0x90;
+        }
+    };
 
     #[cfg(test)]
     test_main();
 
-    let physical_memory_offset = match memory::try_get_physical_memory_offset(boot_info) {
-        Ok(offset) => offset,
-        Err(err) => panic!("{err}"),
-    };
+    lib_sorrow::hlt_loop();
 
-    let mut mapper = unsafe { memory::init(physical_memory_offset) };
-    let mut frame_allocator = unsafe { BootInfoFrameAllocator::init(&boot_info.memory_regions) };
+    // let physical_memory_offset = match memory::try_get_physical_memory_offset(boot_info) {
+    //     Ok(offset) => offset,
+    //     Err(err) => panic!("{err}"),
+    // };
 
-    allocator::init_heap(&mut mapper, &mut frame_allocator).expect("Error: {err:?}");
+    // let mut mapper = unsafe { memory::init(physical_memory_offset) };
+    // let mut frame_allocator = unsafe { BootInfoFrameAllocator::init(&boot_info.memory_regions) };
 
-    let mut executor = Executor::new(TASK_QUEUE_SIZE);
-    let tasks = vec![Task::new(keyboard::handle_keypresses())];
+    // allocator::init_heap(&mut mapper, &mut frame_allocator).expect("Error: {err:?}");
 
-    tasks.into_iter().for_each(|task| {
-        if let Err(task_id) = executor.spawn(task) {
-            panic!("Task {task_id} failed to execute")
-        }
-    });
+    // let mut executor = Executor::new(TASK_QUEUE_SIZE);
+    // let tasks = vec![Task::new(keyboard::handle_keypresses())];
 
-    println!("Successfully loaded kernel");
+    // tasks.into_iter().for_each(|task| {
+    //     if let Err(task_id) = executor.spawn(task) {
+    //         panic!("Task {task_id} failed to execute")
+    //     }
+    // });
 
-    executor.run();
+    // executor.run();
 }
 
 #[cfg(not(test))]
