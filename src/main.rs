@@ -12,7 +12,7 @@ use core::panic::PanicInfo;
 use lib_sorrow::{
     self, allocator,
     devices::keyboard,
-    graphics::gop,
+    graphics::gop::{self, Color, ColorCode, Coordinates},
     memory::{self, BootInfoFrameAllocator},
     println,
     storage::disk,
@@ -35,12 +35,24 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         Err(err) => panic!("{err}"),
     };
 
-    gop_writer.fill(gop::ColorCode::White);
-    let square_size = 20_usize;
-    (0..square_size).for_each(|x| {
-        (0..square_size)
-            .for_each(|y| gop_writer.draw(gop::Position::new(x, y), gop::ColorCode::Red))
-    });
+    gop_writer.clear();
+    gop_writer.draw_rectangle(
+        Coordinates::new(0, 0),
+        Coordinates::new(80, 30),
+        Color::from(ColorCode::Magenta),
+    );
+
+    gop_writer.draw_rectangle(
+        Coordinates::new(20, 20),
+        Coordinates::new(30, 80),
+        Color::from(ColorCode::Blue),
+    );
+
+    gop_writer.draw_rectangle(
+        Coordinates::new(0, 0),
+        Coordinates::new(5, 50),
+        Color::from(ColorCode::Red),
+    );
 
     #[cfg(test)]
     test_main();
@@ -73,8 +85,8 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 #[cfg(not(test))]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    println!("KERNEL PANIC:");
-    println!("{info}");
+    // println!("KERNEL PANIC:");
+    // println!("{info}");
     lib_sorrow::hlt_loop();
 }
 

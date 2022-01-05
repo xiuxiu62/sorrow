@@ -5,7 +5,7 @@
 #![reexport_test_harness_main = "test_main"]
 
 use core::panic::PanicInfo;
-use lib_sorrow::println;
+// use lib_sorrow::println;
 
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
@@ -18,7 +18,7 @@ fn panic(info: &PanicInfo) -> ! {
     lib_sorrow::test_panic_handler(info)
 }
 
-#[test_case]
-fn test_println() {
-    println!("test_println output");
-}
+// #[test_case]
+// fn test_println() {
+//     println!("test_println output");
+// }

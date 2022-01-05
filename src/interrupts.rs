@@ -89,7 +89,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: InterruptStac
     }
 }
 
-#[test_case]
-fn test_breakpoint_exception() {
-    interrupts::int3();
-}
+// #[test_case]
+// fn test_breakpoint_exception() {
+//     interrupts::int3();
+// }

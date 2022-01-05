@@ -1,10 +1,12 @@
-use alloc::vec::Vec;
 use bootloader::boot_info::{FrameBuffer, FrameBufferInfo, Optional, PixelFormat};
+
+use crate::io::insb;
 
 // Color scheme in RGB
 #[derive(Clone, Copy)]
 pub enum ColorCode {
     Black = 0x00_00_00_00,
+    Gray = 0x22_22_22_00,
     Blue = 0x00_00_ff_00,
     Green = 0x00_ff_00_00,
     // Cyan = 3,
@@ -53,18 +55,18 @@ impl From<ColorCode> for Color {
     }
 }
 
-pub struct Position {
+pub struct Coordinates {
     x: usize,
     y: usize,
 }
 
-impl Position {
+impl Coordinates {
     pub fn new(x: usize, y: usize) -> Self {
         Self { x, y }
     }
 }
 
-impl Default for Position {
+impl Default for Coordinates {
     fn default() -> Self {
         Self::new(0, 0)
     }
@@ -88,43 +90,55 @@ impl<'a> Writer<'a> {
         }
     }
 
-    pub fn draw(&mut self, position: Position, color_code: ColorCode) {
-        let pixel_start = self.get_offset(position);
-        let pixel_format = self.info.pixel_format;
-        let buffer = self.as_mut();
+    // TODO: ensure dimensions are within the 2d bounds of the buffer
+    pub fn draw_rectangle(
+        &mut self,
+        start_position: Coordinates,
+        dimensions: Coordinates,
+        color_code: Color,
+    ) {
+        (start_position.x..(start_position.x + dimensions.x)).for_each(|x| {
+            (start_position.y..(start_position.y + dimensions.y))
+                .for_each(|y| self.draw(Coordinates::new(x, y), color_code))
+        })
+    }
+
+    pub fn draw(&mut self, position: Coordinates, color: Color) {
+        let offset = self.get_offset(position);
+        let bytes_per_pixel = self.info.bytes_per_pixel;
 
         // Format color code to BGR if supported by system
-        let color = Color::from(color_code);
+        let pixel_format = self.info.pixel_format;
         let color_formatted = if pixel_format == PixelFormat::BGR {
             color.format_as_bgr()
         } else {
             color.format()
         };
 
-        color_formatted
-            .into_iter()
-            .enumerate()
-            .for_each(|(i, b)| buffer[pixel_start + i] = b);
+        // Write bytes to the framebuffer
+        self.as_mut()[offset..(offset + bytes_per_pixel)]
+            .copy_from_slice(&color_formatted[..bytes_per_pixel]);
     }
 
-    pub fn fill(&mut self, color_code: ColorCode) {
+    pub fn fill(&mut self, color: Color) {
         for x in 0..self.info.horizontal_resolution {
             for y in 0..(self.info.vertical_resolution) {
-                self.draw(Position::new(x, y), color_code)
+                self.draw(Coordinates::new(x, y), color)
             }
         }
     }
 
     pub fn clear(&mut self) {
-        self.fill(ColorCode::White);
+        self.fill(Color::from(ColorCode::Gray));
     }
 
-    /// Gets the physical inxed of a framebuffer pixel
+    /// Gets the physical index of a framebuffer pixel
     ///
     /// multiplies the virtual position by our framebuffer's bytes per pixel
     #[inline]
-    fn get_offset(&self, position: Position) -> usize {
-        (self.info.stride * position.y) + (self.info.bytes_per_pixel * position.x)
+    fn get_offset(&self, position: Coordinates) -> usize {
+        (self.info.stride * self.info.bytes_per_pixel * position.y)
+            + (self.info.bytes_per_pixel * position.x)
     }
 }
 
