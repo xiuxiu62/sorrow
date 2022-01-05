@@ -19,8 +19,8 @@ pub mod graphics;
 pub mod interrupts;
 pub mod io;
 pub mod memory;
-// pub mod process;
 pub mod serial;
+pub mod storage;
 pub mod task;
 
 pub fn init() {

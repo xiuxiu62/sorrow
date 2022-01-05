@@ -39,6 +39,7 @@ fn main() {
     run_cmd.args([
         "-drive",
         format!("format=raw,file={}", bios.display()).as_str(),
+        "--enable-kvm",
     ]);
 
     let binary_kind = runner_utils::binary_kind(&kernel_binary_path);

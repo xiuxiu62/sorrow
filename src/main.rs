@@ -7,11 +7,12 @@
 extern crate alloc;
 
 use alloc::vec;
-use bootloader::{entry_point, BootInfo};
+use bootloader::{boot_info::Optional, entry_point, BootInfo};
 use core::panic::PanicInfo;
 use lib_sorrow::{
     self, allocator,
     devices::keyboard,
+    graphics::gop,
     memory::{self, BootInfoFrameAllocator},
     println,
     task::{executor::Executor, Task},
@@ -24,12 +25,12 @@ entry_point!(kernel_main);
 fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     // lib_sorrow::init();
 
-    // turn the screen gray
-    if let Some(framebuffer) = boot_info.framebuffer.as_mut() {
-        for byte in framebuffer.buffer_mut() {
-            *byte = 0x90;
-        }
+    let mut gop_writer = match gop::Writer::try_new(&mut boot_info.framebuffer) {
+        Ok(writer) => writer,
+        Err(err) => panic!("{err}"),
     };
+
+    gop_writer.clear();
 
     #[cfg(test)]
     test_main();
@@ -47,13 +48,14 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     // allocator::init_heap(&mut mapper, &mut frame_allocator).expect("Error: {err:?}");
 
     // let mut executor = Executor::new(TASK_QUEUE_SIZE);
-    // let tasks = vec![Task::new(keyboard::handle_keypresses())];
-
-    // tasks.into_iter().for_each(|task| {
-    //     if let Err(task_id) = executor.spawn(task) {
-    //         panic!("Task {task_id} failed to execute")
-    //     }
-    // });
+    // Create and spawn tasks
+    // vec![Task::new(keyboard::handle_keypresses())]
+    //     .into_iter()
+    //     .for_each(|task| {
+    //         if let Err(task_id) = executor.spawn(task) {
+    //             panic!("Task {task_id} failed to execute")
+    //         }
+    //     });
 
     // executor.run();
 }
