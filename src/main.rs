@@ -35,7 +35,12 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         Err(err) => panic!("{err}"),
     };
 
-    gop_writer.clear();
+    gop_writer.fill(gop::ColorCode::White);
+    let square_size = 20_usize;
+    (0..square_size).for_each(|x| {
+        (0..square_size)
+            .for_each(|y| gop_writer.draw(gop::Position::new(x, y), gop::ColorCode::Red))
+    });
 
     #[cfg(test)]
     test_main();
