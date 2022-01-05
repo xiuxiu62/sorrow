@@ -39,6 +39,7 @@ fn main() {
     run_cmd.args([
         "-drive",
         format!("format=raw,file={}", bios.display()).as_str(),
+        #[cfg(any(unix))]
         "--enable-kvm",
     ]);
 
