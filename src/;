@@ -39,11 +39,15 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     let foreground = Color::from(ColorCode::Black);
 
     gop_writer.fill(background);
-    buf.iter().enumerate().for_each(|(x, w)| {
-        let color = if *w > 1 { background } else { foreground };
-        (0..gop_writer.info.vertical_resolution)
-            .for_each(|y| gop_writer.draw(Coordinates::new(x, y), color));
-    });
+    buf.iter().enumerate().for_each(|x, w| (0..20).for_each(|y|
+        let color = match w {
+            _ if _ > 1 => background,
+            _ => foreground,
+        };
+        gop_writer.draw()
+                                                            ));
+
+    
 
     #[cfg(test)]
     test_main();

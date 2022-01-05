@@ -74,7 +74,7 @@ impl Default for Coordinates {
 
 pub struct Writer<'a> {
     frame_buffer: &'a mut FrameBuffer,
-    info: FrameBufferInfo,
+    pub info: FrameBufferInfo,
 }
 
 impl<'a> Writer<'a> {
@@ -129,7 +129,7 @@ impl<'a> Writer<'a> {
     }
 
     pub fn clear(&mut self) {
-        self.fill(Color::from(ColorCode::Gray));
+        self.fill(Color::from(ColorCode::Black));
     }
 
     /// Gets the physical index of a framebuffer pixel
