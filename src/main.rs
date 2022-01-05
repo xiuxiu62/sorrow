@@ -39,11 +39,15 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     let foreground = Color::from(ColorCode::Black);
 
     gop_writer.fill(background);
+
+    // Visualize lba read data
     buf.iter().enumerate().for_each(|(x, w)| {
         let color = if *w > 1 { background } else { foreground };
         (0..gop_writer.info.vertical_resolution)
             .for_each(|y| gop_writer.draw(Coordinates::new(x, y), color));
     });
+
+    draw_some_rectangles(&mut gop_writer);
 
     #[cfg(test)]
     test_main();
@@ -71,6 +75,35 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     //     });
 
     // executor.run();
+}
+
+fn draw_some_rectangles(writer: &mut gop::Writer) {
+    writer.draw_rectangle(
+        Coordinates::new(0, 0),
+        Coordinates::new(200, 200),
+        Color::from(ColorCode::Blue),
+    );
+
+    writer.draw_rectangle(
+        Coordinates::new(writer.info.horizontal_resolution - 200, 0),
+        Coordinates::new(200, 200),
+        Color::from(ColorCode::Green),
+    );
+
+    writer.draw_rectangle(
+        Coordinates::new(0, writer.info.vertical_resolution - 200),
+        Coordinates::new(200, 200),
+        Color::from(ColorCode::Red),
+    );
+
+    writer.draw_rectangle(
+        Coordinates::new(
+            writer.info.horizontal_resolution - 200,
+            writer.info.vertical_resolution - 200,
+        ),
+        Coordinates::new(200, 200),
+        Color::from(ColorCode::Magenta),
+    );
 }
 
 #[cfg(not(test))]
