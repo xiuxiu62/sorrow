@@ -15,6 +15,7 @@ use lib_sorrow::{
     graphics::gop,
     memory::{self, BootInfoFrameAllocator},
     println,
+    storage::disk,
     task::{executor::Executor, Task},
 };
 
@@ -24,6 +25,10 @@ entry_point!(kernel_main);
 
 fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     // lib_sorrow::init();
+    let lba = disk::LBA::new(0);
+
+    let mut buf = [0_u16; 512];
+    unsafe { lba.disk_read_sector(1, &mut buf) };
 
     let mut gop_writer = match gop::Writer::try_new(&mut boot_info.framebuffer) {
         Ok(writer) => writer,
