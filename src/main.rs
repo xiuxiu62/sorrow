@@ -13,7 +13,7 @@ use lib_sorrow::{
     self, allocator,
     devices::keyboard,
     gdt,
-    graphics::gop::buffer::{Buffer, Color, ColorCode, Coordinates},
+    graphics::gop::writer::TextWriter,
     interrupts,
     memory::{self, BootInfoFrameAllocator},
     storage::drive::Drive,
@@ -50,15 +50,24 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         Box::new(buf)
     };
 
-    let mut gop_writer = match Buffer::try_new(&mut boot_info.framebuffer) {
+    // let mut gop_writer = match Buffer::try_new(&mut boot_info.framebuffer) {
+    //     Ok(writer) => writer,
+    //     Err(err) => panic!("{err}"),
+    // };
+
+    let mut console = match TextWriter::try_new(&mut boot_info.framebuffer) {
         Ok(writer) => writer,
         Err(err) => panic!("{err}"),
     };
 
-    let background = Color::from(ColorCode::White);
-    let foreground = Color::from(ColorCode::Black);
+    console.clear();
+    console.write("hello world\n");
+    console.write("hello world again");
 
-    gop_writer.fill(background);
+    // let background = Color::from(ColorCode::White);
+    // let foreground = Color::from(ColorCode::Black);
+
+    // gop_writer.fill(background);
 
     // // Visualize lba read data
     // buf.iter().enumerate().for_each(|(x, w)| {

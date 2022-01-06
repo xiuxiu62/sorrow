@@ -1,6 +1,5 @@
+use super::Position;
 use bootloader::boot_info::{FrameBuffer, FrameBufferInfo, Optional, PixelFormat};
-
-use crate::io::insb;
 
 // Color scheme in RGB
 #[derive(Clone, Copy)]
@@ -55,23 +54,6 @@ impl From<ColorCode> for Color {
     }
 }
 
-pub struct Coordinates {
-    x: usize,
-    y: usize,
-}
-
-impl Coordinates {
-    pub fn new(x: usize, y: usize) -> Self {
-        Self { x, y }
-    }
-}
-
-impl Default for Coordinates {
-    fn default() -> Self {
-        Self::new(0, 0)
-    }
-}
-
 pub struct Buffer<'a> {
     frame_buffer: &'a mut FrameBuffer,
     pub info: FrameBufferInfo,
@@ -93,17 +75,17 @@ impl<'a> Buffer<'a> {
     // TODO: ensure dimensions are within the 2d bounds of the buffer
     pub fn draw_rectangle(
         &mut self,
-        start_position: Coordinates,
-        dimensions: Coordinates,
+        start_position: Position,
+        dimensions: Position,
         color_code: Color,
     ) {
         (start_position.x..(start_position.x + dimensions.x)).for_each(|x| {
             (start_position.y..(start_position.y + dimensions.y))
-                .for_each(|y| self.draw(Coordinates::new(x, y), color_code))
+                .for_each(|y| self.draw(Position::new(x, y), color_code))
         })
     }
 
-    pub fn draw(&mut self, position: Coordinates, color: Color) {
+    pub fn draw(&mut self, position: Position, color: Color) {
         let offset = self.get_offset(position);
         let bytes_per_pixel = self.info.bytes_per_pixel;
 
@@ -123,7 +105,7 @@ impl<'a> Buffer<'a> {
     pub fn fill(&mut self, color: Color) {
         for x in 0..self.info.horizontal_resolution {
             for y in 0..(self.info.vertical_resolution) {
-                self.draw(Coordinates::new(x, y), color)
+                self.draw(Position::new(x, y), color)
             }
         }
     }
@@ -136,7 +118,7 @@ impl<'a> Buffer<'a> {
     ///
     /// multiplies the virtual position by our framebuffer's bytes per pixel
     #[inline]
-    fn get_offset(&self, position: Coordinates) -> usize {
+    fn get_offset(&self, position: Position) -> usize {
         (self.info.stride * self.info.bytes_per_pixel * position.y)
             + (self.info.bytes_per_pixel * position.x)
     }
