@@ -1,6 +1,10 @@
 # Sorrow OS
 
-## An operating system or at least some of one
+## A little bit of an operating system
+
+## Build and create image
+`cargo kbuild`
+`cargo kimage`
 
 ## Run
 `cargo krun`
@@ -9,9 +13,12 @@
 `cargo ktest`
 
 ## Todo
-- [ ] Implement a GOP interface 
-  - This is necessary for switching out of VGA Text Mode 
-- [ ] Load external programs into memory
-- [ ] Implement a basic ext2 filesystem
-- [ ] Create a pre-initialization disk image, loaded with userland programs 
-
+- [x] GOP interface 
+- [ ] Primitive shell
+- [ ] Primitive disk location and sector reading
+  - [x] Read sectors from lba 0
+  - [ ] Search and index lba labels
+  - [ ] Read sectors
+  - [ ] Write sectors
+- [ ] Basic ext2 filesystem
+- [ ] Path parsing
