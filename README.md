@@ -1,6 +1,13 @@
 # Sorrow OS
 
-## A little bit of an operating system
+A sad little operating system.
+
+## Prerequisites
+- Latest nightly build of rustc
+- Rustup llvm-preview-tools
+- Preferably a linux dev environment
+- Qemu
+- Kvm (optional, but recommended for linux users)
 
 ## Build and create image
 `cargo kbuild`
