@@ -1,4 +1,7 @@
 use alloc::vec::Vec;
+use core::arch::asm;
+
+use crate::kb_to_b;
 
 const PSF_FONT_MAGIC_NUMBER: u32 = 0x864ab572;
 
@@ -21,4 +24,47 @@ struct PSFFont {
 //         let glyph = 0_u32;
 //         // let psf_font
 //     }
+// }
+
+// pub unsafe fn load_default_font() -> [u8; kb_to_b!(4)] {
+//     // in: edi=4k buffer
+//     // out: buffer filled with font
+//     // clear even/odd mode
+
+//     asm!(
+//         "mov dx, 03ceh",
+//         "mov ax, 5",
+//         "out dx, ax",
+//         // map VGA memory to 0A0000h
+//         "mov ax, 0406h",
+//         "out dx, ax",
+//         // set bitplane 2
+//         "mov dx, 03c4h",
+//         "mov ax, 0402h",
+//         "out dx, ax",
+//         // clear even/odd mode (the other way, don't ask why)
+//         "mov ax, 0604h",
+//         "out dx, ax",
+//         // copy charmap
+//         "mov esi, 0A0000h",
+//         "mov ecx, 256",
+//         // copy 16 bytes to bitmap
+//         "@@: movsd",
+//         "movsd",
+//         "movsd",
+//         "movsd",
+//         // skip another 16 bytes
+//         "add esi, 16",
+//         "loop @b",
+//         // restore VGA state to normal operation
+//         "mov ax, 0302h",
+//         "out dx, ax",
+//         "mov ax, 0204h",
+//         "out dx, ax",
+//         "mov dx, 03ceh",
+//         "mov ax, 1005h",
+//         "out dx, ax",
+//         "mov ax, 0E06h",
+//         "out dx, ax"
+//     );
 // }

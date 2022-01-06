@@ -18,7 +18,6 @@ harness = false
 bootloader =  "0.10.10"
 conquer-once = { version = "0.3.2", default-features = false }
 crossbeam-queue = { version = "0.3.2", features = ["alloc"], default-features = false }
-font8x8 = { version = "0.3.1", features = ["unicode"], default-features = false }
 futures-util = { version = "0.3.19", features = ["alloc"], default-features = false }
 lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
 linked_list_allocator = "0.9.1"
@@ -31,5 +30,3 @@ x86_64 = "0.14.7"
 
 [package.metadata.bootloader]
 map-physical-memory = true
-map-page-table-recursively = true
-map-framebuffer = true

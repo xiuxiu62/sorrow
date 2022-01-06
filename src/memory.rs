@@ -1,7 +1,4 @@
-use bootloader::{
-    boot_info::{MemoryRegionKind, MemoryRegions, Optional},
-    BootInfo,
-};
+use bootloader::boot_info::{MemoryRegionKind, MemoryRegions, Optional};
 use x86_64::{
     structures::paging::{FrameAllocator, OffsetPageTable, PageTable, PhysFrame, Size4KiB},
     PhysAddr, VirtAddr,
@@ -36,13 +33,12 @@ unsafe fn active_level_4_table(physical_memory_offset: VirtAddr) -> &'static mut
 }
 
 pub fn try_get_physical_memory_offset<'a>(
-    boot_info: &'static BootInfo,
+    physical_memory_offset: Optional<u64>,
 ) -> Result<VirtAddr, &'a str> {
-    let physical_memory_offset = match boot_info.physical_memory_offset {
-        Optional::Some(offset) => offset,
-        Optional::None => return Err("Failed to acquire physical memory offset"),
-    };
-    Ok(VirtAddr::new(physical_memory_offset))
+    match physical_memory_offset {
+        Optional::Some(offset) => Ok(VirtAddr::new(offset)),
+        Optional::None => Err("Failed to acquire physical memory offset"),
+    }
 }
 
 /// A FrameAllocator that always returns `None`.

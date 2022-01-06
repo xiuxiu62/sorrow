@@ -72,12 +72,12 @@ impl Default for Coordinates {
     }
 }
 
-pub struct Writer<'a> {
+pub struct Buffer<'a> {
     frame_buffer: &'a mut FrameBuffer,
     pub info: FrameBufferInfo,
 }
 
-impl<'a> Writer<'a> {
+impl<'a> Buffer<'a> {
     pub fn new(frame_buffer: &'a mut FrameBuffer) -> Self {
         let info = frame_buffer.info();
         Self { frame_buffer, info }
@@ -142,13 +142,13 @@ impl<'a> Writer<'a> {
     }
 }
 
-impl<'a> AsRef<[u8]> for Writer<'a> {
+impl<'a> AsRef<[u8]> for Buffer<'a> {
     fn as_ref(&self) -> &[u8] {
         self.frame_buffer.buffer()
     }
 }
 
-impl<'a> AsMut<[u8]> for Writer<'a> {
+impl<'a> AsMut<[u8]> for Buffer<'a> {
     fn as_mut(&mut self) -> &mut [u8] {
         self.frame_buffer.buffer_mut()
     }

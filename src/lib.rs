@@ -9,6 +9,7 @@
 
 extern crate alloc;
 
+use bootloader::boot_info::BootInfo;
 use core::panic::PanicInfo;
 use x86_64::instructions;
 
@@ -23,11 +24,8 @@ pub mod serial;
 pub mod storage;
 pub mod task;
 
-pub fn init() {
-    gdt::init();
-    interrupts::init_idt();
-    unsafe { interrupts::PICS.lock().initialize() };
-    interrupts::enable_and_hlt();
+pub fn init(_boot_info: &'static BootInfo) -> Result<(), &str> {
+    Ok(())
 }
 
 pub fn hlt_loop() -> ! {

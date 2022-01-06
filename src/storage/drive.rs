@@ -1,13 +1,13 @@
 use crate::io::{insb, insw, outb};
 
-pub struct LBA(u32);
+pub struct Drive(u32);
 
-impl LBA {
+impl Drive {
     pub fn new(lba: u32) -> Self {
         Self(lba)
     }
 
-    pub unsafe fn disk_read_sector<'a>(
+    pub unsafe fn read_sector<'a>(
         &self,
         total: usize,
         buffer: &'a mut [u16],
