@@ -12,6 +12,8 @@ extern crate alloc;
 
 use bootloader::boot_info::BootInfo;
 use core::panic::PanicInfo;
+use graphics::gop::TextWriter;
+use memory::BootInfoFrameAllocator;
 use x86_64::instructions;
 
 pub mod allocator;
@@ -25,8 +27,31 @@ pub mod serial;
 pub mod storage;
 pub mod task;
 
-pub fn init(_boot_info: &'static BootInfo) -> Result<(), &str> {
-    Ok(())
+pub fn init(boot_info: &'static mut BootInfo) -> Result<TextWriter, &str> {
+    gdt::init();
+    interrupts::init_idt();
+    // interrupts::disable();
+
+    // Try to initialize paging
+    match memory::try_get_physical_memory_offset(boot_info.physical_memory_offset) {
+        Ok(offset) => unsafe {
+            let mut mapper = memory::init(offset);
+            let mut frame_allocator = BootInfoFrameAllocator::init(&mut boot_info.memory_regions);
+            if let Err(_) = allocator::init_heap(&mut mapper, &mut frame_allocator) {
+                return Err("Failed to initialize heap");
+            }
+        },
+        Err(err) => return Err(err),
+    };
+
+    // interrupts::enable();
+
+    let console = match TextWriter::try_new(&mut boot_info.framebuffer) {
+        Ok(writer) => writer,
+        Err(err) => panic!("{err}"),
+    };
+
+    Ok(console)
 }
 
 pub fn hlt_loop() -> ! {

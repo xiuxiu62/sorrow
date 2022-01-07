@@ -2,15 +2,43 @@ use super::{
     buffer::{Buffer, Color, ColorCode},
     Position,
 };
-use alloc::vec::Vec;
+use alloc::{
+    boxed::Box,
+    fmt::{self, Write},
+    vec::Vec,
+};
 use bootloader::boot_info::{FrameBuffer, Optional};
 use font8x8::UnicodeFonts;
+use spin::Mutex;
+
+/// A global `TextWriter` instance that can be used for printing text to the GOP buffer.
+///
+/// Used by the `print!` and `println!` macros.
+static mut TEXT_WRITER: Mutex<StaticOption<TextWriter>> = Mutex::new(StaticOption::None);
+
+pub fn init_console(frame_buffer: &'static mut FrameBuffer) {
+    unsafe { TEXT_WRITER = Mutex::new(StaticOption::Some(TextWriter::new(frame_buffer))) };
+}
 
 pub enum Direction {
     Left,
     Right,
     Up,
     Down,
+}
+
+pub enum StaticOption<T> {
+    Some(T),
+    None,
+}
+
+impl<T> StaticOption<T> {
+    pub fn unwrap_mut(&self) -> Box<T> {
+        match self {
+            StaticOption::Some(v) => Box::new(*v),
+            StaticOption::None => panic!("called `Option::unwrap()` on a `None` value"),
+        }
+    }
 }
 
 pub struct TextWriter {
@@ -92,8 +120,8 @@ impl TextWriter {
 
     fn write_back_buffer(&mut self) {
         let back_buffer = &self.back;
-        (0..self.back.dimensions.x).for_each(|x| {
-            (0..self.back.dimensions.y).for_each(|y| {
+        (0..self.dimensions.x).for_each(|x| {
+            (0..self.dimensions.y).for_each(|y| {
                 let position = Position::new(x, y);
                 if let Some(c) = back_buffer.get(position) {
                     self.front.put_char(c, position);
@@ -128,6 +156,24 @@ impl TextWriter {
             Position { x: _, y: 0 } => return,
             Position { x: _, y } => self.position = Position::new(self.dimensions.x, y - 1),
         }
+    }
+}
+
+impl AsRef<TextWriter> for TextWriter {
+    fn as_ref(&self) -> &TextWriter {
+        &self
+    }
+}
+
+impl Write for TextWriter {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        self.write_str(s);
+        Ok(())
+    }
+
+    fn write_char(&mut self, c: char) -> fmt::Result {
+        self.write_char(c);
+        Ok(())
     }
 }
 
@@ -186,10 +232,11 @@ impl AsMut<Buffer<'static>> for FrontBuffer {
     }
 }
 
+#[derive(Clone)]
 struct BackBuffer {
     inner: Vec<Option<char>>,
-    dimensions: Position,
     capacity: usize,
+    width: usize,
 }
 
 impl BackBuffer {
@@ -198,8 +245,8 @@ impl BackBuffer {
 
         Self {
             inner: vec![None; capacity],
-            dimensions,
             capacity,
+            width: dimensions.x,
         }
     }
 
@@ -222,9 +269,8 @@ impl BackBuffer {
 
     pub fn shift(&mut self) {
         // TODO: ensure this is the first index of the last row
-        self.rotate_left(self.dimensions.x);
-        (self.capacity - self.dimensions.x + 1..self.capacity)
-            .for_each(|i| self.set_index(i, None));
+        (0..self.width).for_each(|i| self.set_index(i, None));
+        self.rotate_left(self.width);
     }
 
     fn rotate_left(&mut self, n: usize) {
@@ -240,7 +286,7 @@ impl BackBuffer {
     }
 
     fn index(&self, position: Position) -> usize {
-        (position.y * self.dimensions.x) + position.x
+        (position.y * self.width) + position.x
     }
 }
 
@@ -256,9 +302,25 @@ impl AsMut<Vec<Option<char>>> for BackBuffer {
     }
 }
 
+#[doc(hidden)]
+pub unsafe fn _print(args: fmt::Arguments) {
+    &mut TEXT_WRITER.lock().unwrap().write_fmt(args).unwrap();
+}
+
+#[macro_export]
+macro_rules! print {
+    ($($arg:tt)*) =>  (unsafe { $crate::graphics::gop::writer::_print(format_args!($($arg)*)) });
+}
+
+/// Like the `println!` macro in the standard library, but prints to the VGA text buffer.
+#[macro_export]
+macro_rules! println {
+    () => ($crate::print!("\n"));
+    ($($arg:tt)*) => ($crate::print!("{}\n", format_args!($($arg)*)));
+}
+
 #[cfg(test)]
 mod tests {
-
     #[test_case]
     fn write_char_succeeds() {}
 }

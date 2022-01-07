@@ -6,43 +6,35 @@
 
 extern crate alloc;
 
-use alloc::{boxed::Box, format, vec};
+use alloc::{boxed::Box, vec};
 use bootloader::{entry_point, BootInfo};
 use core::panic::PanicInfo;
 use lib_sorrow::{
-    self, allocator,
-    devices::keyboard,
-    gdt,
-    graphics::gop::writer::TextWriter,
+    self,
+    devices::keyboard::Keyboard,
     interrupts,
-    memory::{self, BootInfoFrameAllocator},
     storage::drive::Drive,
     task::{executor::Executor, Task},
 };
+use pc_keyboard::{layouts::Us104Key, HandleControl, ScancodeSet1};
 
 static TASK_QUEUE_SIZE: usize = 100;
 
 entry_point!(kernel_main);
 
 fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
-    gdt::init();
-    interrupts::init_idt();
-    // interrupts::disable();
-
-    // Try to initialize paging
-    match memory::try_get_physical_memory_offset(boot_info.physical_memory_offset) {
-        Ok(offset) => unsafe {
-            let mut mapper = memory::init(offset);
-            let mut frame_allocator = BootInfoFrameAllocator::init(&boot_info.memory_regions);
-            allocator::init_heap(&mut mapper, &mut frame_allocator);
-        },
+    let frame_buffer = &mut boot_info.framebuffer;
+    let mut console = match lib_sorrow::init(boot_info) {
+        Ok(console) => console,
         Err(err) => panic!("{err}"),
     };
 
-    unsafe { interrupts::PICS.lock().initialize() };
-    // interrupts::enable();
-
+    // Initialize devices
     let drive = Drive::new(0);
+    let mut keyboard = {
+        unsafe { interrupts::PICS.lock().initialize() };
+        Keyboard::new(Us104Key, ScancodeSet1, HandleControl::Ignore)
+    };
 
     let data = {
         let mut buf = [0_u16; 512];
@@ -55,33 +47,27 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     //     Err(err) => panic!("{err}"),
     // };
 
-    let mut console = match TextWriter::try_new(&mut boot_info.framebuffer) {
-        Ok(writer) => writer,
-        Err(err) => panic!("{err}"),
-    };
-
     console.clear();
     console.write_str("hello world\n");
     console.write_str("hello world\n");
     console.write_str("hello world\n");
-    console.shift();
 
-    lib_sorrow::hlt_loop();
+    // lib_sorrow::hlt_loop();
 
     #[cfg(test)]
     test_main();
 
-    // let mut executor = Executor::new(TASK_QUEUE_SIZE);
+    let mut executor = Executor::new(TASK_QUEUE_SIZE);
     // Create and spawn tasks
-    // vec![Task::new(keyboard::handle_keypresses(&mut console))]
-    //     .into_iter()
-    //     .for_each(|task| {
-    //         if let Err(task_id) = executor.spawn(task) {
-    //             panic!("Task {task_id} failed to execute")
-    //         }
-    //     });
+    vec![Task::new(keyboard.listen(&mut console))]
+        .into_iter()
+        .for_each(|task| {
+            if let Err(task_id) = executor.spawn(task) {
+                panic!("Task {task_id} failed to execute")
+            }
+        });
 
-    // executor.run();
+    executor.run();
 }
 
 #[cfg(not(test))]
