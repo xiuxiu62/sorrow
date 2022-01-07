@@ -7,6 +7,7 @@
 #![test_runner(test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
+#[macro_use]
 extern crate alloc;
 
 use bootloader::boot_info::BootInfo;

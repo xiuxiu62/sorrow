@@ -16,6 +16,8 @@ pub enum Direction {
 pub struct TextWriter {
     front: FrontBuffer,
     back: BackBuffer,
+    position: Position,
+    dimensions: Position,
 }
 
 impl TextWriter {
@@ -24,8 +26,10 @@ impl TextWriter {
         let dimensions =
             Position::new(info.horizontal_resolution / 8, info.vertical_resolution / 8);
         Self {
-            front: FrontBuffer::new(frame_buffer, dimensions),
+            front: FrontBuffer::new(frame_buffer),
             back: BackBuffer::new(dimensions),
+            position: Position::default(),
+            dimensions,
         }
     }
 
@@ -46,11 +50,11 @@ impl TextWriter {
             '\r' => self.carriage_return(),
             '\t' => (0..4).into_iter().for_each(|_| self.write_char(' ')),
             c => {
-                self.front.put_char_current(c);
-                self.back.set(self.front.position, c);
+                self.front.put_char(c, self.position);
+                self.back.set(self.position, Some(c));
                 self.increment_x();
             }
-        };
+        }
     }
 
     pub fn clear(&mut self) {
@@ -60,8 +64,8 @@ impl TextWriter {
 
     pub fn clear_last(&mut self) {
         self.decrement_x();
-        self.front.put_char_current(' ');
-        self.back.set(self.front.position, ' ');
+        self.front.put_char(' ', self.position);
+        self.back.set(self.position, Some(' '));
     }
 
     pub fn move_cursor(&mut self, direction: Direction) {
@@ -77,11 +81,11 @@ impl TextWriter {
         self.increment_y();
     }
 
-    fn carriage_return(&mut self) {
-        self.front.position.x = 0;
+    pub fn carriage_return(&mut self) {
+        self.position.x = 0;
     }
 
-    fn shift(&mut self) {
+    pub fn shift(&mut self) {
         self.back.shift();
         self.write_back_buffer()
     }
@@ -92,67 +96,46 @@ impl TextWriter {
             (0..self.back.dimensions.y).for_each(|y| {
                 let position = Position::new(x, y);
                 if let Some(c) = back_buffer.get(position) {
-                    self.front.put_char(*c, position);
+                    self.front.put_char(c, position);
                 };
             });
         });
     }
 
     fn increment_x(&mut self) {
-        if self.front.position.x == self.front.dimensions.x {
-            self.increment_y();
-            return;
+        match self.position {
+            Position { x, y: _ } if x == self.dimensions.x => self.increment_y(),
+            Position { x, y } => self.position = Position::new(x + 1, y),
         }
-
-        self.front.position.x += 1;
     }
 
     fn decrement_x(&mut self) {
-        if self.front.position.x == 0 {
-            self.decrement_y();
-            return;
+        match self.position {
+            Position { x: 0, y: _ } => self.decrement_y(),
+            Position { x, y } => self.position = Position::new(x - 1, y),
         }
-
-        self.front.position.x -= 1;
     }
 
     fn increment_y(&mut self) {
-        if self.front.position.y == self.front.dimensions.y {
-            self.shift();
-            return;
+        match self.position {
+            Position { x: _, y } if y == self.dimensions.y => self.shift(),
+            Position { x: _, y } => self.position = Position::new(0, y + 1),
         }
-
-        self.front.position.y += 1;
-        self.front.position.x = 0;
     }
 
     fn decrement_y(&mut self) {
-        if self.front.position.y == 0 {
-            return;
+        match self.position {
+            Position { x: _, y: 0 } => return,
+            Position { x: _, y } => self.position = Position::new(self.dimensions.x, y - 1),
         }
-
-        self.front.position.y -= 1;
-        self.front.position.x -= self.front.dimensions.x;
     }
 }
 
-struct FrontBuffer {
-    inner: Buffer<'static>,
-    dimensions: Position,
-    position: Position,
-}
+struct FrontBuffer(Buffer<'static>);
 
 impl FrontBuffer {
-    pub fn new(frame_buffer: &'static mut FrameBuffer, dimensions: Position) -> Self {
-        Self {
-            inner: Buffer::new(frame_buffer),
-            dimensions,
-            position: Position::default(),
-        }
-    }
-
-    fn put_char_current(&mut self, c: char) {
-        self.put_char(c, self.position);
+    pub fn new(frame_buffer: &'static mut FrameBuffer) -> Self {
+        Self(Buffer::new(frame_buffer))
     }
 
     fn put_char(&mut self, c: char, position: Position) {
@@ -164,7 +147,7 @@ impl FrontBuffer {
 
         rendered_char.into_iter().enumerate().for_each(|(y, byte)| {
             (0..8).enumerate().for_each(|(x, bit)| {
-                self.inner.draw(
+                self.as_mut().draw(
                     Position::new(offset.x + x, offset.y + y),
                     Color::from(match byte & (1 << bit) {
                         0 => ColorCode::Black,
@@ -176,7 +159,7 @@ impl FrontBuffer {
     }
 
     pub fn clear(&mut self) {
-        self.inner.clear();
+        self.as_mut().clear();
     }
 
     fn render_char(&self, c: char) -> Result<[u8; 8], &str> {
@@ -191,49 +174,69 @@ impl FrontBuffer {
     }
 }
 
+impl AsRef<Buffer<'static>> for FrontBuffer {
+    fn as_ref(&self) -> &Buffer<'static> {
+        &self.0
+    }
+}
+
+impl AsMut<Buffer<'static>> for FrontBuffer {
+    fn as_mut(&mut self) -> &mut Buffer<'static> {
+        &mut self.0
+    }
+}
+
 struct BackBuffer {
     inner: Vec<Option<char>>,
     dimensions: Position,
+    capacity: usize,
 }
 
 impl BackBuffer {
     pub fn new(dimensions: Position) -> Self {
-        let mut inner = Vec::with_capacity(dimensions.flat());
-        inner.fill(None);
-        Self { inner, dimensions }
+        let capacity = dimensions.flat();
+
+        Self {
+            inner: vec![None; capacity],
+            dimensions,
+            capacity,
+        }
     }
 
-    pub fn set(&mut self, position: Position, c: char) {
-        let index = self.index(position);
-        self.as_mut().insert(index, Some(c))
+    // Unwrap Safety: vec is filled
+    pub fn get(&self, position: Position) -> Option<char> {
+        *self.as_ref().get(self.index(position)).unwrap()
     }
 
-    pub fn get(&self, position: Position) -> &Option<char> {
-        // Unwrap Safety: vec is filled
-        self.as_ref().get(self.index(position)).unwrap()
+    pub fn set(&mut self, position: Position, c: Option<char>) {
+        self.set_index(self.index(position), c);
+    }
+
+    pub fn set_index(&mut self, i: usize, c: Option<char>) {
+        self.as_mut()[i] = c;
     }
 
     pub fn clear(&mut self) {
-        let max = self.dimensions.flat();
-        let inner = self.as_mut();
-        for i in 0..max {
-            inner.insert(i, None);
-        }
+        (0..self.capacity).for_each(|i| self.set_index(i, None));
     }
 
     pub fn shift(&mut self) {
-        let inner = self.as_ref();
-        if inner.len() == 0 {
-            return;
-        }
-
-        let dimensions = self.dimensions;
-        let max = self.index(dimensions);
-        let inner = self.as_mut();
-
         // TODO: ensure this is the first index of the last row
-        inner.rotate_left(dimensions.x);
-        (max - dimensions.x + 1..max).for_each(|i| inner.insert(i, None));
+        self.rotate_left(self.dimensions.x);
+        (self.capacity - self.dimensions.x + 1..self.capacity)
+            .for_each(|i| self.set_index(i, None));
+    }
+
+    fn rotate_left(&mut self, n: usize) {
+        self.as_mut().rotate_left(n);
+    }
+
+    fn _rotate_right(&mut self, n: usize) {
+        self.as_mut().rotate_right(n);
+    }
+
+    fn _len(&self) -> usize {
+        self.as_ref().len()
     }
 
     fn index(&self, position: Position) -> usize {
@@ -251,4 +254,11 @@ impl AsMut<Vec<Option<char>>> for BackBuffer {
     fn as_mut(&mut self) -> &mut Vec<Option<char>> {
         &mut self.inner
     }
+}
+
+#[cfg(test)]
+mod tests {
+
+    #[test_case]
+    fn write_char_succeeds() {}
 }

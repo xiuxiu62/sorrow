@@ -6,7 +6,7 @@
 
 extern crate alloc;
 
-use alloc::{boxed::Box, vec};
+use alloc::{boxed::Box, format, vec};
 use bootloader::{entry_point, BootInfo};
 use core::panic::PanicInfo;
 use lib_sorrow::{
@@ -61,27 +61,27 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     };
 
     console.clear();
+    console.write_str("hello world\n");
+    console.write_str("hello world\n");
+    console.write_str("hello world\n");
+    console.shift();
 
-    // console.write_str("hello world\n");
-    // console.write_str("hello world again\n");
-    // ('a'..='z').for_each(|c| console.write_str(format!("{c}\n").as_str()));
-    // ('A'..='Z').for_each(|c| console.write_str(format!("{c}\n").as_str()));
-    // ('0'..='9').for_each(|c| console.write_str(format!("{c}\n").as_str()));
+    lib_sorrow::hlt_loop();
 
     #[cfg(test)]
     test_main();
 
-    let mut executor = Executor::new(TASK_QUEUE_SIZE);
+    // let mut executor = Executor::new(TASK_QUEUE_SIZE);
     // Create and spawn tasks
-    vec![Task::new(keyboard::handle_keypresses(&mut console))]
-        .into_iter()
-        .for_each(|task| {
-            if let Err(task_id) = executor.spawn(task) {
-                panic!("Task {task_id} failed to execute")
-            }
-        });
+    // vec![Task::new(keyboard::handle_keypresses(&mut console))]
+    //     .into_iter()
+    //     .for_each(|task| {
+    //         if let Err(task_id) = executor.spawn(task) {
+    //             panic!("Task {task_id} failed to execute")
+    //         }
+    //     });
 
-    executor.run();
+    // executor.run();
 }
 
 #[cfg(not(test))]
