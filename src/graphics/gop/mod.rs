@@ -11,6 +11,10 @@ impl Position {
     pub fn new(x: usize, y: usize) -> Self {
         Self { x, y }
     }
+
+    pub fn flat(&self) -> usize {
+        self.x * self.y
+    }
 }
 
 impl Default for Position {

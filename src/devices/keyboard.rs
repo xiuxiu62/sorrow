@@ -1,4 +1,5 @@
-use crate::{graphics::vga, print, println};
+use crate::graphics::gop::writer::{Direction, TextWriter};
+use alloc::format;
 use conquer_once::spin::OnceCell;
 use core::{
     pin::Pin,
@@ -20,12 +21,12 @@ static WAKER: AtomicWaker = AtomicWaker::new();
 pub(crate) fn add_scancode(scancode: u8) {
     if let Ok(queue) = SCANCODE_QUEUE.try_get() {
         if let Err(_) = queue.push(scancode) {
-            println!("WARNING: scancode queue full; dropping keyboard input");
+            // println!("WARNING: scancode queue full; dropping keyboard input");
         } else {
             WAKER.wake();
         }
     } else {
-        println!("WARNING: scancode queue uninitialized");
+        // println!("WARNING: scancode queue uninitialized");
     }
 }
 
@@ -64,33 +65,33 @@ impl Stream for ScancodeStream {
     }
 }
 
-pub async fn handle_keypresses() {
+pub async fn handle_keypresses(console: &mut TextWriter) {
     let mut scancodes = ScancodeStream::new();
     let mut keyboard = Keyboard::new(layouts::Us104Key, ScancodeSet1, HandleControl::Ignore);
 
     while let Some(scancode) = scancodes.next().await {
         if let Ok(Some(key_event)) = keyboard.add_byte(scancode) {
             if let Some(key) = keyboard.process_keyevent(key_event) {
-                handle_keypress(key).await;
+                handle_keypress(console, key).await;
             }
         }
     }
 }
 
-async fn handle_keypress(key: DecodedKey) {
+async fn handle_keypress(console: &mut TextWriter, key: DecodedKey) {
     match key {
         DecodedKey::Unicode(key) => match key {
-            '\n' => vga::newline(),
-            '\t' => vga::tabline(),
-            '\u{8}' => vga::clear_last(),
-            _ => print!("{key}"),
+            '\n' => console.newline(),
+            '\t' => console.write_str("    "),
+            '\u{8}' => console.clear_last(),
+            _ => console.write_char(key),
         },
         DecodedKey::RawKey(key) => match key {
-            KeyCode::ArrowLeft => vga::move_cursor(vga::Direction::Left),
-            KeyCode::ArrowRight => vga::move_cursor(vga::Direction::Right),
-            KeyCode::ArrowUp => vga::move_cursor(vga::Direction::Up),
-            KeyCode::ArrowDown => vga::move_cursor(vga::Direction::Down),
-            _ => print!("{:?}", key),
+            KeyCode::ArrowLeft => console.move_cursor(Direction::Left),
+            KeyCode::ArrowRight => console.move_cursor(Direction::Right),
+            KeyCode::ArrowUp => console.move_cursor(Direction::Up),
+            KeyCode::ArrowDown => console.move_cursor(Direction::Down),
+            _ => console.write_str(format!("{key:?}").as_str()),
         },
     }
 }

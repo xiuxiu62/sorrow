@@ -2,58 +2,78 @@ use super::{
     buffer::{Buffer, Color, ColorCode},
     Position,
 };
-use alloc::{
-    rc::Rc,
-    vec::{self, Vec},
-};
-use bootloader::boot_info::{FrameBuffer, FrameBufferInfo, Optional};
-use core::{
-    fmt::{self, Write},
-    ptr,
-};
+use alloc::vec::Vec;
+use bootloader::boot_info::{FrameBuffer, Optional};
 use font8x8::UnicodeFonts;
 
-pub struct TextWriter<'a> {
-    front: FrontBuffer<'a>,
+pub enum Direction {
+    Left,
+    Right,
+    Up,
+    Down,
+}
+
+pub struct TextWriter {
+    front: FrontBuffer,
     back: BackBuffer,
 }
 
-impl<'a> TextWriter<'a> {
+impl TextWriter {
     pub fn new(frame_buffer: &'static mut FrameBuffer) -> Self {
+        let info = frame_buffer.info();
+        let dimensions =
+            Position::new(info.horizontal_resolution / 8, info.vertical_resolution / 8);
         Self {
-            front: FrontBuffer::new(frame_buffer),
-            back: BackBuffer::new(),
+            front: FrontBuffer::new(frame_buffer, dimensions),
+            back: BackBuffer::new(dimensions),
         }
     }
 
-    pub fn try_new(frame_buffer: &'static mut Optional<FrameBuffer>) -> Result<Self, &'a str> {
+    pub fn try_new(frame_buffer: &'static mut Optional<FrameBuffer>) -> Result<Self, &str> {
         match frame_buffer {
             Optional::Some(frame_buffer) => Ok(Self::new(frame_buffer)),
             Optional::None => Err("Failed to acquire frame buffer handle"),
         }
     }
 
-    pub fn write(&mut self, s: &'a str) {
-        s.chars().for_each(|c| self.write_char(c));
+    pub fn write_str(&mut self, s: &str) {
+        s.chars().for_each(|c| self.write_char(c))
     }
 
     pub fn write_char(&mut self, c: char) {
         match c {
             '\n' => self.newline(),
             '\r' => self.carriage_return(),
-
+            '\t' => (0..4).into_iter().for_each(|_| self.write_char(' ')),
             c => {
                 self.front.put_char_current(c);
+                self.back.set(self.front.position, c);
                 self.increment_x();
             }
-        }
+        };
     }
 
     pub fn clear(&mut self) {
-        self.front.inner.clear();
+        self.front.clear();
+        self.back.clear();
     }
 
-    fn newline(&mut self) {
+    pub fn clear_last(&mut self) {
+        self.decrement_x();
+        self.front.put_char_current(' ');
+        self.back.set(self.front.position, ' ');
+    }
+
+    pub fn move_cursor(&mut self, direction: Direction) {
+        match direction {
+            Direction::Left => self.decrement_x(),
+            Direction::Right => self.increment_x(),
+            Direction::Down => self.decrement_y(),
+            Direction::Up => self.increment_y(),
+        }
+    }
+
+    pub fn newline(&mut self) {
         self.increment_y();
     }
 
@@ -67,11 +87,15 @@ impl<'a> TextWriter<'a> {
     }
 
     fn write_back_buffer(&mut self) {
-        for (y, row) in self.back.as_ref().iter().enumerate() {
-            for (x, c) in row.iter().enumerate() {
-                self.front.put_char(*c, Position::new(x, y));
-            }
-        }
+        let back_buffer = &self.back;
+        (0..self.back.dimensions.x).for_each(|x| {
+            (0..self.back.dimensions.y).for_each(|y| {
+                let position = Position::new(x, y);
+                if let Some(c) = back_buffer.get(position) {
+                    self.front.put_char(*c, position);
+                };
+            });
+        });
     }
 
     fn increment_x(&mut self) {
@@ -112,19 +136,17 @@ impl<'a> TextWriter<'a> {
     }
 }
 
-struct FrontBuffer<'a> {
-    inner: Buffer<'a>,
+struct FrontBuffer {
+    inner: Buffer<'static>,
     dimensions: Position,
     position: Position,
 }
 
-impl<'a> FrontBuffer<'a> {
-    pub fn new(frame_buffer: &'static mut FrameBuffer) -> Self {
-        let info = frame_buffer.info();
-
+impl FrontBuffer {
+    pub fn new(frame_buffer: &'static mut FrameBuffer, dimensions: Position) -> Self {
         Self {
             inner: Buffer::new(frame_buffer),
-            dimensions: Position::new(info.horizontal_resolution / 8, info.vertical_resolution / 8),
+            dimensions,
             position: Position::default(),
         }
     }
@@ -140,22 +162,24 @@ impl<'a> FrontBuffer<'a> {
             Err(err) => panic!("{err}"),
         };
 
-        for (y, byte) in rendered_char.iter().enumerate() {
-            for (x, bit) in (0..8).enumerate() {
-                let color = if *byte & (1 << bit) == 0 {
-                    ColorCode::Black
-                } else {
-                    ColorCode::White
-                };
+        rendered_char.into_iter().enumerate().for_each(|(y, byte)| {
+            (0..8).enumerate().for_each(|(x, bit)| {
                 self.inner.draw(
                     Position::new(offset.x + x, offset.y + y),
-                    Color::from(color),
+                    Color::from(match byte & (1 << bit) {
+                        0 => ColorCode::Black,
+                        _ => ColorCode::White,
+                    }),
                 );
-            }
-        }
+            });
+        });
     }
 
-    fn render_char(&self, c: char) -> Result<[u8; 8], &'a str> {
+    pub fn clear(&mut self) {
+        self.inner.clear();
+    }
+
+    fn render_char(&self, c: char) -> Result<[u8; 8], &str> {
         match font8x8::BASIC_FONTS.get(c) {
             Some(rendered_char) => Ok(rendered_char),
             None => Err("Invalid keycode"),
@@ -167,32 +191,64 @@ impl<'a> FrontBuffer<'a> {
     }
 }
 
-struct BackBuffer(Vec<Vec<char>>);
+struct BackBuffer {
+    inner: Vec<Option<char>>,
+    dimensions: Position,
+}
 
 impl BackBuffer {
-    fn new() -> Self {
-        Self(Vec::from(Vec::new()))
+    pub fn new(dimensions: Position) -> Self {
+        let mut inner = Vec::with_capacity(dimensions.flat());
+        inner.fill(None);
+        Self { inner, dimensions }
     }
 
-    fn shift(&mut self) {
+    pub fn set(&mut self, position: Position, c: char) {
+        let index = self.index(position);
+        self.as_mut().insert(index, Some(c))
+    }
+
+    pub fn get(&self, position: Position) -> &Option<char> {
+        // Unwrap Safety: vec is filled
+        self.as_ref().get(self.index(position)).unwrap()
+    }
+
+    pub fn clear(&mut self) {
+        let max = self.dimensions.flat();
         let inner = self.as_mut();
+        for i in 0..max {
+            inner.insert(i, None);
+        }
+    }
+
+    pub fn shift(&mut self) {
+        let inner = self.as_ref();
         if inner.len() == 0 {
             return;
         }
 
-        inner.rotate_left(1);
-        inner.pop();
+        let dimensions = self.dimensions;
+        let max = self.index(dimensions);
+        let inner = self.as_mut();
+
+        // TODO: ensure this is the first index of the last row
+        inner.rotate_left(dimensions.x);
+        (max - dimensions.x + 1..max).for_each(|i| inner.insert(i, None));
+    }
+
+    fn index(&self, position: Position) -> usize {
+        (position.y * self.dimensions.x) + position.x
     }
 }
 
-impl AsRef<Vec<Vec<char>>> for BackBuffer {
-    fn as_ref(&self) -> &Vec<Vec<char>> {
-        &self.0
+impl AsRef<Vec<Option<char>>> for BackBuffer {
+    fn as_ref(&self) -> &Vec<Option<char>> {
+        &self.inner
     }
 }
 
-impl AsMut<Vec<Vec<char>>> for BackBuffer {
-    fn as_mut(&mut self) -> &mut Vec<Vec<char>> {
-        &mut self.0
+impl AsMut<Vec<Option<char>>> for BackBuffer {
+    fn as_mut(&mut self) -> &mut Vec<Option<char>> {
+        &mut self.inner
     }
 }

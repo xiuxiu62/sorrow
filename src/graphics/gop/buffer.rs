@@ -135,10 +135,3 @@ impl<'a> AsMut<[u8]> for Buffer<'a> {
         self.frame_buffer.buffer_mut()
     }
 }
-
-// turn the screen gray
-// if let Some(framebuffer) = boot_info.framebuffer.as_mut() {
-//     for byte in framebuffer.buffer_mut() {
-//         *byte = 0x90;
-//     }
-// };

@@ -7,7 +7,7 @@
 extern crate alloc;
 
 use alloc::{boxed::Box, vec};
-use bootloader::{boot_info::Optional, entry_point, BootInfo};
+use bootloader::{entry_point, BootInfo};
 use core::panic::PanicInfo;
 use lib_sorrow::{
     self, allocator,
@@ -61,79 +61,28 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     };
 
     console.clear();
-    console.write("hello world\n");
-    console.write("hello world again");
 
-    // let background = Color::from(ColorCode::White);
-    // let foreground = Color::from(ColorCode::Black);
-
-    // gop_writer.fill(background);
-
-    // // Visualize lba read data
-    // buf.iter().enumerate().for_each(|(x, w)| {
-    //     let color = if *w > 1 { background } else { foreground };
-    //     (0..gop_writer.info.vertical_resolution)
-    //         .for_each(|y| gop_writer.draw(Coordinates::new(x, y), color));
-    // });
-
-    // draw_some_rectangles(&mut gop_writer);
+    // console.write_str("hello world\n");
+    // console.write_str("hello world again\n");
+    // ('a'..='z').for_each(|c| console.write_str(format!("{c}\n").as_str()));
+    // ('A'..='Z').for_each(|c| console.write_str(format!("{c}\n").as_str()));
+    // ('0'..='9').for_each(|c| console.write_str(format!("{c}\n").as_str()));
 
     #[cfg(test)]
     test_main();
 
-    lib_sorrow::hlt_loop();
-
-    // let physical_memory_offset = match memory::try_get_physical_memory_offset(boot_info) {
-    //     Ok(offset) => offset,
-    //     Err(err) => panic!("{err}"),
-    // };
-
-    // let mut mapper = unsafe { memory::init(physical_memory_offset) };
-    // let mut frame_allocator = unsafe { BootInfoFrameAllocator::init(&boot_info.memory_regions) };
-
-    // allocator::init_heap(&mut mapper, &mut frame_allocator).expect("Error: {err:?}");
-
-    // let mut executor = Executor::new(TASK_QUEUE_SIZE);
+    let mut executor = Executor::new(TASK_QUEUE_SIZE);
     // Create and spawn tasks
-    // vec![Task::new(keyboard::handle_keypresses())]
-    //     .into_iter()
-    //     .for_each(|task| {
-    //         if let Err(task_id) = executor.spawn(task) {
-    //             panic!("Task {task_id} failed to execute")
-    //         }
-    //     });
+    vec![Task::new(keyboard::handle_keypresses(&mut console))]
+        .into_iter()
+        .for_each(|task| {
+            if let Err(task_id) = executor.spawn(task) {
+                panic!("Task {task_id} failed to execute")
+            }
+        });
 
-    // executor.run();
+    executor.run();
 }
-
-// fn draw_some_rectangles(writer: &mut gop::Writer) {
-//     writer.draw_rectangle(
-//         Coordinates::new(0, 0),
-//         Coordinates::new(200, 200),
-//         Color::from(ColorCode::Blue),
-//     );
-
-//     writer.draw_rectangle(
-//         Coordinates::new(writer.info.horizontal_resolution - 200, 0),
-//         Coordinates::new(200, 200),
-//         Color::from(ColorCode::Green),
-//     );
-
-//     writer.draw_rectangle(
-//         Coordinates::new(0, writer.info.vertical_resolution - 200),
-//         Coordinates::new(200, 200),
-//         Color::from(ColorCode::Red),
-//     );
-
-//     writer.draw_rectangle(
-//         Coordinates::new(
-//             writer.info.horizontal_resolution - 200,
-//             writer.info.vertical_resolution - 200,
-//         ),
-//         Coordinates::new(200, 200),
-//         Color::from(ColorCode::Magenta),
-//     );
-// }
 
 #[cfg(not(test))]
 #[panic_handler]
