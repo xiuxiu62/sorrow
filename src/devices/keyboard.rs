@@ -81,7 +81,7 @@ impl<L: KeyboardLayout, S: ScancodeSet> Keyboard<L, S> {
         }
     }
 
-    pub async fn listen(&mut self, console: &'static mut TextWriter) {
+    pub async fn listen(&mut self, console: &'static mut TextWriter<'_>) {
         while let Some(scancode) = self.stream.next().await {
             if let Ok(Some(key_event)) = self.device.add_byte(scancode) {
                 if let Some(key) = self.device.process_keyevent(key_event) {
@@ -91,7 +91,7 @@ impl<L: KeyboardLayout, S: ScancodeSet> Keyboard<L, S> {
         }
     }
 
-    async fn handle_keypress(&self, console: &mut TextWriter, key: DecodedKey) {
+    async fn handle_keypress(&self, console: &mut TextWriter<'_>, key: DecodedKey) {
         match key {
             DecodedKey::Unicode(key) => match key {
                 '\n' => console.newline(),

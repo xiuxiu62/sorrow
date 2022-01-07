@@ -12,7 +12,7 @@ use core::panic::PanicInfo;
 use lib_sorrow::{
     self,
     devices::keyboard::Keyboard,
-    interrupts,
+    interrupts, println,
     storage::drive::Drive,
     task::{executor::Executor, Task},
 };
@@ -23,8 +23,7 @@ static TASK_QUEUE_SIZE: usize = 100;
 entry_point!(kernel_main);
 
 fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
-    let frame_buffer = &mut boot_info.framebuffer;
-    let mut console = match lib_sorrow::init(boot_info) {
+    match lib_sorrow::init(boot_info) {
         Ok(console) => console,
         Err(err) => panic!("{err}"),
     };
@@ -42,32 +41,28 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         Box::new(buf)
     };
 
-    // let mut gop_writer = match Buffer::try_new(&mut boot_info.framebuffer) {
-    //     Ok(writer) => writer,
-    //     Err(err) => panic!("{err}"),
-    // };
-
-    console.clear();
-    console.write_str("hello world\n");
-    console.write_str("hello world\n");
-    console.write_str("hello world\n");
-
-    // lib_sorrow::hlt_loop();
+    println!("hello world");
+    println!("hello world");
+    println!("hello world");
+    println!("hello world");
+    println!("hello world");
 
     #[cfg(test)]
     test_main();
 
-    let mut executor = Executor::new(TASK_QUEUE_SIZE);
-    // Create and spawn tasks
-    vec![Task::new(keyboard.listen(&mut console))]
-        .into_iter()
-        .for_each(|task| {
-            if let Err(task_id) = executor.spawn(task) {
-                panic!("Task {task_id} failed to execute")
-            }
-        });
+    lib_sorrow::hlt_loop();
 
-    executor.run();
+    // let mut executor = Executor::new(TASK_QUEUE_SIZE);
+    // Create and spawn tasks
+    // vec![Task::new(keyboard.listen(&mut console))]
+    //     .into_iter()
+    //     .for_each(|task| {
+    //         if let Err(task_id) = executor.spawn(task) {
+    //             panic!("Task {task_id} failed to execute")
+    //         }
+    //     });
+
+    // executor.run();
 }
 
 #[cfg(not(test))]

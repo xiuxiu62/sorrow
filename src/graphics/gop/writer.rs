@@ -3,7 +3,6 @@ use super::{
     Position,
 };
 use alloc::{
-    boxed::Box,
     fmt::{self, Write},
     vec::Vec,
 };
@@ -16,8 +15,10 @@ use spin::Mutex;
 /// Used by the `print!` and `println!` macros.
 static TEXT_WRITER: Mutex<Option<TextWriter>> = Mutex::new(None);
 
-pub fn init_console(frame_buffer: &'static mut FrameBuffer) {
-     *TEXT_WRITER.lock() = Some(TextWriter::new(frame_buffer));
+pub fn init(frame_buffer: &'static mut Optional<FrameBuffer>) -> Result<(), &str> {
+    *TEXT_WRITER.lock() = Some(TextWriter::try_new(frame_buffer)?);
+    TEXT_WRITER.lock().as_mut().unwrap().clear();
+    Ok(())
 }
 
 pub enum Direction {
@@ -27,18 +28,19 @@ pub enum Direction {
     Down,
 }
 
-pub struct TextWriter {
-    front: FrontBuffer,
+pub struct TextWriter<'a> {
+    front: FrontBuffer<'a>,
     back: BackBuffer,
     position: Position,
     dimensions: Position,
 }
 
-impl TextWriter {
-    pub fn new(frame_buffer: &'static mut FrameBuffer) -> Self {
+impl<'a> TextWriter<'a> {
+    pub fn new(frame_buffer: &'a mut FrameBuffer) -> Self {
         let info = frame_buffer.info();
         let dimensions =
             Position::new(info.horizontal_resolution / 8, info.vertical_resolution / 8);
+
         Self {
             front: FrontBuffer::new(frame_buffer),
             back: BackBuffer::new(dimensions),
@@ -47,7 +49,7 @@ impl TextWriter {
         }
     }
 
-    pub fn try_new(frame_buffer: &'static mut Optional<FrameBuffer>) -> Result<Self, &str> {
+    pub fn try_new(frame_buffer: &'a mut Optional<FrameBuffer>) -> Result<Self, &str> {
         match frame_buffer {
             Optional::Some(frame_buffer) => Ok(Self::new(frame_buffer)),
             Optional::None => Err("Failed to acquire frame buffer handle"),
@@ -145,13 +147,13 @@ impl TextWriter {
     }
 }
 
-impl AsRef<TextWriter> for TextWriter {
-    fn as_ref(&self) -> &TextWriter {
-        &self
-    }
-}
+// impl AsRef<TextWriter<'a>> for TextWriter<'a> {
+//     fn as_ref(&self) -> &'a TextWriter {
+//         &self
+//     }
+// }
 
-impl Write for TextWriter {
+impl Write for TextWriter<'_> {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         self.write_str(s);
         Ok(())
@@ -163,10 +165,10 @@ impl Write for TextWriter {
     }
 }
 
-struct FrontBuffer(Buffer<'static>);
+struct FrontBuffer<'a>(Buffer<'a>);
 
-impl FrontBuffer {
-    pub fn new(frame_buffer: &'static mut FrameBuffer) -> Self {
+impl<'a> FrontBuffer<'a> {
+    pub fn new(frame_buffer: &'a mut FrameBuffer) -> Self {
         Self(Buffer::new(frame_buffer))
     }
 
@@ -206,14 +208,14 @@ impl FrontBuffer {
     }
 }
 
-impl AsRef<Buffer<'static>> for FrontBuffer {
-    fn as_ref(&self) -> &Buffer<'static> {
+impl<'a> AsRef<Buffer<'a>> for FrontBuffer<'a> {
+    fn as_ref(&self) -> &Buffer<'a> {
         &self.0
     }
 }
 
-impl AsMut<Buffer<'static>> for FrontBuffer {
-    fn as_mut(&mut self) -> &mut Buffer<'static> {
+impl<'a> AsMut<Buffer<'a>> for FrontBuffer<'a> {
+    fn as_mut(&mut self) -> &mut Buffer<'a> {
         &mut self.0
     }
 }
@@ -289,13 +291,19 @@ impl AsMut<Vec<Option<char>>> for BackBuffer {
 }
 
 #[doc(hidden)]
-pub unsafe fn _print(args: fmt::Arguments) {
-    TEXT_WRITER.lock().as_mut().unwrap().write_fmt(args).unwrap();
+pub fn _print(args: fmt::Arguments) {
+    // Unwrap Safety: kernel will panic if we fail to initialize writer
+    TEXT_WRITER
+        .lock()
+        .as_mut()
+        .unwrap()
+        .write_fmt(args)
+        .expect("Failed to write to text writer");
 }
 
 #[macro_export]
 macro_rules! print {
-    ($($arg:tt)*) =>  (unsafe { $crate::graphics::gop::writer::_print(format_args!($($arg)*)) });
+    ($($arg:tt)*) =>  ($crate::graphics::gop::writer::_print(format_args!($($arg)*)));
 }
 
 /// Like the `println!` macro in the standard library, but prints to the VGA text buffer.

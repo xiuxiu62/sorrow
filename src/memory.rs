@@ -10,9 +10,12 @@ use x86_64::{
 /// complete physical memory is mapped to virtual memory at the passed
 /// `physical_memory_offset`. Also, this function must be only called once
 /// to avoid aliasing `&mut` references (which is undefined behavior).
-pub unsafe fn init(physical_memory_offset: VirtAddr) -> OffsetPageTable<'static> {
-    let level_4_table = active_level_4_table(physical_memory_offset);
-    OffsetPageTable::new(level_4_table, physical_memory_offset)
+pub unsafe fn init<'a>(
+    physical_memory_offset: Optional<u64>,
+) -> Result<OffsetPageTable<'static>, &'a str> {
+    let offset = try_get_physical_memory_offset(physical_memory_offset)?;
+    let level_4_table = active_level_4_table(offset);
+    Ok(OffsetPageTable::new(level_4_table, offset))
 }
 
 /// Returns a mutable reference to the active level 4 table.

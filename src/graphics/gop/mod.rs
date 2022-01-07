@@ -1,7 +1,7 @@
 mod buffer;
 pub mod writer;
 
-pub use writer::{Direction, TextWriter};
+pub use writer::{init, Direction, TextWriter};
 
 #[derive(Clone, Copy)]
 pub struct Position {
