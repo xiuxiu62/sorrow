@@ -28,7 +28,7 @@ pub mod task;
 
 pub fn init(boot_info: &'static mut BootInfo) -> Result<(), &str> {
     gdt::init();
-    interrupts::init_idt();
+    interrupts::init();
     // interrupts::disable();
 
     // Try to initialize paging

@@ -45,8 +45,9 @@ lazy_static! {
     };
 }
 
-pub fn init_idt() {
+pub fn init() {
     IDT.load();
+    unsafe { PICS.lock().initialize() };
 }
 
 pub fn disable() {

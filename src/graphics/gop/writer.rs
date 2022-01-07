@@ -1,6 +1,6 @@
 use super::{
     buffer::{Buffer, Color, ColorCode},
-    Position,
+    Direction, Position,
 };
 use alloc::{
     fmt::{self, Write},
@@ -19,13 +19,6 @@ pub fn init(frame_buffer: &'static mut Optional<FrameBuffer>) -> Result<(), &str
     *TEXT_WRITER.lock() = Some(TextWriter::try_new(frame_buffer)?);
     TEXT_WRITER.lock().as_mut().unwrap().clear();
     Ok(())
-}
-
-pub enum Direction {
-    Left,
-    Right,
-    Up,
-    Down,
 }
 
 pub struct TextWriter<'a> {
@@ -291,6 +284,11 @@ impl AsMut<Vec<Option<char>>> for BackBuffer {
 }
 
 #[doc(hidden)]
+pub fn _move(direction: Direction) {
+    TEXT_WRITER.lock().as_mut().unwrap().move_cursor(direction);
+}
+
+#[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
     // Unwrap Safety: kernel will panic if we fail to initialize writer
     TEXT_WRITER
@@ -302,8 +300,15 @@ pub fn _print(args: fmt::Arguments) {
 }
 
 #[macro_export]
+macro_rules! move_cursor {
+    ($direction:expr) => {
+        $crate::graphics::gop::_move($direction)
+    };
+}
+
+#[macro_export]
 macro_rules! print {
-    ($($arg:tt)*) =>  ($crate::graphics::gop::writer::_print(format_args!($($arg)*)));
+    ($($arg:tt)*) =>  ($crate::graphics::gop::_print(format_args!($($arg)*)));
 }
 
 /// Like the `println!` macro in the standard library, but prints to the VGA text buffer.

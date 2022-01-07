@@ -1,7 +1,14 @@
 mod buffer;
-pub mod writer;
+mod writer;
 
-pub use writer::{init, Direction, TextWriter};
+pub use writer::{_move, _print, init};
+
+pub enum Direction {
+    Left,
+    Right,
+    Up,
+    Down,
+}
 
 #[derive(Clone, Copy)]
 pub struct Position {

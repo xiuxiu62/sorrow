@@ -1,5 +1,4 @@
-use crate::graphics::gop::{Direction, TextWriter};
-use alloc::format;
+use crate::{graphics::gop::Direction, move_cursor, print};
 use conquer_once::spin::OnceCell;
 use core::{
     pin::Pin,
@@ -14,8 +13,9 @@ use pc_keyboard::{
     layouts, DecodedKey, HandleControl, KeyCode, KeyboardLayout, ScancodeSet, ScancodeSet1,
 };
 
-static SCANCODE_QUEUE: OnceCell<ArrayQueue<u8>> = OnceCell::uninit();
 static WAKER: AtomicWaker = AtomicWaker::new();
+static SCANCODE_QUEUE: OnceCell<ArrayQueue<u8>> = OnceCell::uninit();
+const SCANCODE_QUEUE_SIZE: usize = 100;
 
 /// Called by the keyboard interrupt handler
 ///
@@ -40,7 +40,7 @@ pub struct ScancodeStream {
 impl ScancodeStream {
     pub fn new() -> Self {
         SCANCODE_QUEUE
-            .try_init_once(|| ArrayQueue::new(100))
+            .try_init_once(|| ArrayQueue::new(SCANCODE_QUEUE_SIZE))
             .expect("ScancodeStream::new should only be called once");
         ScancodeStream { _private: () }
     }
@@ -81,30 +81,25 @@ impl<L: KeyboardLayout, S: ScancodeSet> Keyboard<L, S> {
         }
     }
 
-    pub async fn listen(&mut self, console: &'static mut TextWriter<'_>) {
+    pub async fn listen(&mut self) {
         while let Some(scancode) = self.stream.next().await {
             if let Ok(Some(key_event)) = self.device.add_byte(scancode) {
                 if let Some(key) = self.device.process_keyevent(key_event) {
-                    self.handle_keypress(console, key).await;
+                    self.handle_keypress(key).await;
                 }
             }
         }
     }
 
-    async fn handle_keypress(&self, console: &mut TextWriter<'_>, key: DecodedKey) {
+    async fn handle_keypress(&self, key: DecodedKey) {
         match key {
-            DecodedKey::Unicode(key) => match key {
-                '\n' => console.newline(),
-                '\t' => console.write_str("    "),
-                '\u{8}' => console.clear_last(),
-                _ => console.write_char(key),
-            },
+            DecodedKey::Unicode(key) => print!("{key}"),
             DecodedKey::RawKey(key) => match key {
-                KeyCode::ArrowLeft => console.move_cursor(Direction::Left),
-                KeyCode::ArrowRight => console.move_cursor(Direction::Right),
-                KeyCode::ArrowUp => console.move_cursor(Direction::Up),
-                KeyCode::ArrowDown => console.move_cursor(Direction::Down),
-                _ => console.write_str(format!("{key:?}").as_str()),
+                KeyCode::ArrowLeft => move_cursor!(Direction::Left),
+                KeyCode::ArrowRight => move_cursor!(Direction::Right),
+                KeyCode::ArrowUp => move_cursor!(Direction::Up),
+                KeyCode::ArrowDown => move_cursor!(Direction::Down),
+                _ => print!("{key:?}"),
             },
         }
     }
