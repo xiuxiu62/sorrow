@@ -14,10 +14,10 @@ use spin::Mutex;
 /// A global `TextWriter` instance that can be used for printing text to the GOP buffer.
 ///
 /// Used by the `print!` and `println!` macros.
-static mut TEXT_WRITER: Mutex<StaticOption<TextWriter>> = Mutex::new(StaticOption::None);
+static TEXT_WRITER: Mutex<Option<TextWriter>> = Mutex::new(None);
 
 pub fn init_console(frame_buffer: &'static mut FrameBuffer) {
-    unsafe { TEXT_WRITER = Mutex::new(StaticOption::Some(TextWriter::new(frame_buffer))) };
+     *TEXT_WRITER.lock() = Some(TextWriter::new(frame_buffer));
 }
 
 pub enum Direction {
@@ -25,20 +25,6 @@ pub enum Direction {
     Right,
     Up,
     Down,
-}
-
-pub enum StaticOption<T> {
-    Some(T),
-    None,
-}
-
-impl<T> StaticOption<T> {
-    pub fn unwrap_mut(&self) -> Box<T> {
-        match self {
-            StaticOption::Some(v) => Box::new(*v),
-            StaticOption::None => panic!("called `Option::unwrap()` on a `None` value"),
-        }
-    }
 }
 
 pub struct TextWriter {
@@ -304,7 +290,7 @@ impl AsMut<Vec<Option<char>>> for BackBuffer {
 
 #[doc(hidden)]
 pub unsafe fn _print(args: fmt::Arguments) {
-    &mut TEXT_WRITER.lock().unwrap().write_fmt(args).unwrap();
+    TEXT_WRITER.lock().as_mut().unwrap().write_fmt(args).unwrap();
 }
 
 #[macro_export]
