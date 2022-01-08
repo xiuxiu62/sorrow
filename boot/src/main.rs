@@ -1,7 +1,7 @@
 use std::{
     env,
     path::{Path, PathBuf},
-    process::{Command, ExitStatus},
+    process::Command,
     time::Duration,
 };
 
@@ -19,9 +19,9 @@ const TEST_TIMEOUT_SECS: u64 = 10;
 
 fn main() {
     let mut args = env::args().skip(1); // skip executable name
-
     let kernel_binary_path = PathBuf::from(args.next().unwrap()).canonicalize().unwrap();
     let bios = create_disk_images(&kernel_binary_path);
+
     let no_boot = match args.next() {
         Some(arg) => match arg.as_str() {
             "--no-run" => true,
@@ -43,27 +43,30 @@ fn main() {
         "--enable-kvm",
     ]);
 
-    let binary_kind = runner_utils::binary_kind(&kernel_binary_path);
-    if binary_kind.is_test() {
-        run_cmd.args(TEST_ARGS);
-
-        let exit_status = run_test_command(run_cmd);
-        match exit_status.code() {
-            Some(33) => {} // success
-            other => panic!("Test failed (exit code: {:?})", other),
-        }
-    } else {
-        run_cmd.args(RUN_ARGS);
-
-        let exit_status = run_cmd.status().unwrap();
-        if !exit_status.success() {
-            std::process::exit(exit_status.code().unwrap_or(1));
-        }
-    }
+    match runner_utils::binary_kind(&kernel_binary_path).is_test() {
+        true => test(run_cmd),
+        false => run(run_cmd),
+    };
 }
 
-fn run_test_command(mut cmd: Command) -> ExitStatus {
-    runner_utils::run_with_timeout(&mut cmd, Duration::from_secs(TEST_TIMEOUT_SECS)).unwrap()
+fn run(mut run_cmd: Command) {
+    run_cmd.args(RUN_ARGS);
+
+    let exit_status = run_cmd.status().unwrap();
+    if !exit_status.success() {
+        std::process::exit(exit_status.code().unwrap_or(1));
+    }
+
+}
+
+fn test(mut run_cmd: Command) {
+    run_cmd.args(TEST_ARGS);
+
+    let exit_status = runner_utils::run_with_timeout(&mut run_cmd, Duration::from_secs(TEST_TIMEOUT_SECS)).unwrap();
+    match exit_status.code() {
+        Some(33) => return, // success
+        other => panic!("Test failed (exit code: {:?})", other),
+    }
 }
 
 pub fn create_disk_images(kernel_binary_path: &Path) -> PathBuf {
@@ -94,11 +97,13 @@ pub fn create_disk_images(kernel_binary_path: &Path) -> PathBuf {
         .parent()
         .unwrap()
         .join(format!("boot-bios-{}.img", kernel_binary_name));
+
     if !disk_image.exists() {
         panic!(
             "Disk image does not exist at {} after bootloader build",
             disk_image.display()
         );
     }
+
     disk_image
 }

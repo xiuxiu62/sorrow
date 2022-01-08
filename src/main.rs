@@ -30,18 +30,15 @@ const TASK_QUEUE_SIZE: usize = 100;
 entry_point!(kernel_main);
 
 fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
-    match lib_sorrow::init(boot_info) {
-        Ok(console) => console,
-        Err(err) => panic!("{err}"),
-    };
+    if let Err(err) = lib_sorrow::init(boot_info) {
+        panic!("{err}");
+    }
 
     // Initialize devices
     let drive = Drive::new(0);
-    let data = {
-        let mut buf = [0_u16; 512];
-        unsafe { drive.read_sector(1, &mut buf) };
-        Box::new(buf)
-    };
+
+    let mut buf = [0_u16; 512];
+    unsafe { drive.read_sector(1, &mut buf) };
 
     // static KEYBOARD: Keyboard<Us104Key, ScancodeSet1> =
     //     Keyboard::new(Us104Key, ScancodeSet1, HandleControl::Ignore);
@@ -76,8 +73,8 @@ async fn print_number(n: u32) {
 #[cfg(not(test))]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    // println!("KERNEL PANIC:");
-    // println!("{info}");
+    println!("KERNEL PANIC:");
+    println!("{info}");
     lib_sorrow::hlt_loop();
 }
 
