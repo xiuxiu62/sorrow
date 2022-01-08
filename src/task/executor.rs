@@ -31,11 +31,11 @@ impl TaskWaker {
 
 impl Wake for TaskWaker {
     fn wake(self: Arc<Self>) {
-        self.wake_task();
+        let _ = self.wake_task();
     }
 
     fn wake_by_ref(self: &Arc<Self>) {
-        self.wake_task();
+        let _ = self.wake_task();
     }
 }
 

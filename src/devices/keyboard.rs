@@ -108,3 +108,29 @@ impl<L: KeyboardLayout, S: ScancodeSet> Keyboard<L, S> {
 pub fn init_us_keyboard() -> Keyboard<layouts::Us104Key, ScancodeSet1> {
     Keyboard::new(layouts::Us104Key, ScancodeSet1, HandleControl::Ignore)
 }
+
+pub async fn listen() {
+    let mut keyboard =
+        pc_keyboard::Keyboard::new(layouts::Us104Key, ScancodeSet1, HandleControl::Ignore);
+    let mut stream = ScancodeStream::new();
+    while let Some(scancode) = stream.next().await {
+        if let Ok(Some(key_event)) = keyboard.add_byte(scancode) {
+            if let Some(key) = keyboard.process_keyevent(key_event) {
+                handle_keypress(key).await;
+            }
+        }
+    }
+}
+
+async fn handle_keypress(key: DecodedKey) {
+    match key {
+        DecodedKey::Unicode(key) => print!("{key}"),
+        DecodedKey::RawKey(key) => match key {
+            KeyCode::ArrowLeft => move_cursor!(Direction::Left),
+            KeyCode::ArrowRight => move_cursor!(Direction::Right),
+            KeyCode::ArrowUp => move_cursor!(Direction::Up),
+            KeyCode::ArrowDown => move_cursor!(Direction::Down),
+            _ => print!("{key:?}"),
+        },
+    }
+}

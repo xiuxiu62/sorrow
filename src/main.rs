@@ -9,10 +9,9 @@ extern crate alloc;
 use alloc::{boxed::Box, vec};
 use bootloader::{entry_point, BootInfo};
 use core::panic::PanicInfo;
-use lazy_static::lazy_static;
 use lib_sorrow::{
     self,
-    devices::keyboard::Keyboard,
+    devices::{self, keyboard::Keyboard},
     println,
     storage::drive::Drive,
     task::{executor::Executor, Task},
@@ -20,10 +19,11 @@ use lib_sorrow::{
 use pc_keyboard::{layouts::Us104Key, HandleControl, ScancodeSet1};
 use spin::Mutex;
 
-lazy_static! {
-    static ref KEYBOARD: Mutex<Keyboard<Us104Key, ScancodeSet1>> =
-        Mutex::new(Keyboard::new(Us104Key, ScancodeSet1, HandleControl::Ignore));
-}
+// lazy_static! {
+//     static ref KEYBOARD: Arc<Mutex<Keyboard<Us104Key, ScancodeSet1>>> = Arc::new(Mutex::new(
+//         Keyboard::new(Us104Key, ScancodeSet1, HandleControl::Ignore),
+//     ));
+// }
 
 const TASK_QUEUE_SIZE: usize = 100;
 
@@ -43,13 +43,9 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         Box::new(buf)
     };
 
-    // static mut keyboard: Keyboard<Us104Key, ScancodeSet1> =
+    // static KEYBOARD: Keyboard<Us104Key, ScancodeSet1> =
     //     Keyboard::new(Us104Key, ScancodeSet1, HandleControl::Ignore);
 
-    println!("hello world");
-    println!("hello world");
-    println!("hello world");
-    println!("hello world");
     println!("hello world");
 
     #[cfg(test)]
@@ -59,16 +55,22 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 
     // Create and spawn tasks
     let mut executor = Executor::new(TASK_QUEUE_SIZE);
-    vec![Task::new(KEYBOARD.lock().listen())]
-        .into_iter()
-        .for_each(|task| {
-            if let Err(task_id) = executor.spawn(task) {
-                panic!("Task {task_id} failed to execute")
-            }
-        });
+    vec![
+        // Task::new(crate::devices::keyboard::listen()),
+        Task::new(print_number(42)),
+    ]
+    .into_iter()
+    .for_each(|task| {
+        if let Err(task_id) = executor.spawn(task) {
+            panic!("Task {task_id} failed to execute")
+        }
+    });
 
-    executor.spawn(Task::new(KEYBOARD.lock().listen()));
     executor.run();
+}
+
+async fn print_number(n: u32) {
+    println!("{n}");
 }
 
 #[cfg(not(test))]
