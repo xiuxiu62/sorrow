@@ -1,14 +1,14 @@
 use x86_64::instructions::port::{PortRead, PortWrite};
 
-pub unsafe fn insb(port: u16) -> u8 {
+pub unsafe fn inb(port: u16) -> u8 {
     u8::read_from_port(port)
 }
 
-pub unsafe fn insw(port: u16) -> u16 {
+pub unsafe fn inw(port: u16) -> u16 {
     u16::read_from_port(port)
 }
 
-pub unsafe fn insl(port: u16) -> u32 {
+pub unsafe fn inl(port: u16) -> u32 {
     u32::read_from_port(port)
 }
 

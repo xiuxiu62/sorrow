@@ -1,6 +1,6 @@
 use super::{Task, TaskId};
 use crate::interrupts;
-use alloc::{collections::BTreeMap, sync::Arc, task::Wake};
+use alloc::{collections::BTreeMap, sync::Arc, task::Wake, string::String};
 use core::task::{Context, Poll, Waker};
 use crossbeam_queue::ArrayQueue;
 
@@ -54,14 +54,16 @@ impl Executor {
         }
     }
 
-    pub fn spawn(&mut self, task: Task) -> Result<(), TaskId> {
+    pub fn spawn(&mut self, task: Task) -> Result<(), String> {
         let task_id = task.id;
         if let Some(_) = self.tasks.insert(task.id, task) {
-            panic!("Task {task_id} already exists");
+            return Err(format!("Task {task_id} already exists"));
         }
 
-        self.task_queue.push(task_id)?;
-        Ok(())
+        match self.task_queue.push(task_id) {
+            Ok(()) => Ok(()),
+            Err(task_id) => Err(format!("Failed to queue task {task_id}")) 
+        }
     }
 
     pub fn run(&mut self) -> ! {

@@ -4,7 +4,7 @@ use super::{
 };
 use alloc::{
     fmt::{self, Write},
-    vec::Vec,
+    vec::Vec, string::{ToString, String},
 };
 use bootloader::boot_info::{FrameBuffer, Optional};
 use font8x8::UnicodeFonts;
@@ -15,7 +15,7 @@ use spin::Mutex;
 /// Used by the `print!` and `println!` macros.
 static TEXT_WRITER: Mutex<Option<TextWriter>> = Mutex::new(None);
 
-pub fn init(frame_buffer: &'static mut Optional<FrameBuffer>) -> Result<(), &str> {
+pub fn init(frame_buffer: &'static mut Optional<FrameBuffer>) -> Result<(), String> {
     *TEXT_WRITER.lock() = Some(TextWriter::try_new(frame_buffer)?);
     TEXT_WRITER.lock().as_mut().unwrap().clear();
     Ok(())
@@ -42,10 +42,10 @@ impl<'a> TextWriter<'a> {
         }
     }
 
-    pub fn try_new(frame_buffer: &'a mut Optional<FrameBuffer>) -> Result<Self, &str> {
+    pub fn try_new(frame_buffer: &'a mut Optional<FrameBuffer>) -> Result<Self, String> {
         match frame_buffer {
             Optional::Some(frame_buffer) => Ok(Self::new(frame_buffer)),
-            Optional::None => Err("Failed to acquire frame buffer handle"),
+            Optional::None => Err("Failed to acquire frame buffer handle".to_string()),
         }
     }
 
@@ -139,12 +139,6 @@ impl<'a> TextWriter<'a> {
         }
     }
 }
-
-// impl AsRef<TextWriter<'a>> for TextWriter<'a> {
-//     fn as_ref(&self) -> &'a TextWriter {
-//         &self
-//     }
-// }
 
 impl Write for TextWriter<'_> {
     fn write_str(&mut self, s: &str) -> fmt::Result {

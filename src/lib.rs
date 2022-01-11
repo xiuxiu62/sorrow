@@ -4,12 +4,14 @@
 #![feature(abi_x86_interrupt)]
 #![feature(alloc_error_handler)]
 #![feature(const_mut_refs)]
+#![feature(in_band_lifetimes)]
 #![test_runner(test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
 #[macro_use]
 extern crate alloc;
 
+use alloc::string::{String, ToString};
 use bootloader::boot_info::BootInfo;
 use core::panic::PanicInfo;
 use memory::BootInfoFrameAllocator;
@@ -25,8 +27,9 @@ pub mod memory;
 pub mod serial;
 pub mod storage;
 pub mod task;
+pub mod util;
 
-pub fn init(boot_info: &'static mut BootInfo) -> Result<(), &str> {
+pub fn init(boot_info: &'static mut BootInfo) -> Result<(), String> {
     gdt::init();
     interrupts::init();
     // interrupts::disable();
@@ -36,7 +39,7 @@ pub fn init(boot_info: &'static mut BootInfo) -> Result<(), &str> {
     let mut frame_allocator =
         unsafe { BootInfoFrameAllocator::init(&mut boot_info.memory_regions) };
     if let Err(_) = allocator::init_heap(&mut mapper, &mut frame_allocator) {
-        return Err("Failed to initialize heap");
+        return Err("Failed to initialize heap".to_string());
     }
 
     // interrupts::enable();

@@ -3,7 +3,7 @@ use lazy_static::lazy_static;
 use pic8259::ChainedPics;
 use spin;
 use x86_64::{
-    instructions::{self, interrupts},
+    instructions::interrupts,
     structures::idt::{InterruptDescriptorTable, InterruptStackFrame},
 };
 
@@ -81,7 +81,7 @@ extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: InterruptStackFr
 }
 
 extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: InterruptStackFrame) {
-    let scancode: u8 = unsafe { io::insb(0x60) };
+    let scancode: u8 = unsafe { io::inb(0x60) };
     keyboard::add_scancode(scancode);
 
     unsafe {
