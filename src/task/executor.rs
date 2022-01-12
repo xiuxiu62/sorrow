@@ -56,7 +56,7 @@ impl Executor {
 
     pub fn spawn(&mut self, task: Task) -> Result<(), String> {
         let task_id = task.id;
-        if let Some(_) = self.tasks.insert(task.id, task) {
+        if self.tasks.insert(task.id, task).is_some() {
             return Err(format!("Task {task_id} already exists"));
         }
 

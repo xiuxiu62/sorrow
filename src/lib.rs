@@ -35,9 +35,8 @@ pub fn init(boot_info: &'static mut BootInfo) -> Result<(), String> {
 
     // Try to initialize paging
     let mut mapper = unsafe { memory::init(boot_info.physical_memory_offset) }?;
-    let mut frame_allocator =
-        unsafe { BootInfoFrameAllocator::init(&mut boot_info.memory_regions) };
-    if let Err(_) = allocator::init_heap(&mut mapper, &mut frame_allocator) {
+    let mut frame_allocator = unsafe { BootInfoFrameAllocator::init(&boot_info.memory_regions) };
+    if allocator::init_heap(&mut mapper, &mut frame_allocator).is_err() {
         return Err("Failed to initialize heap".to_string());
     }
 

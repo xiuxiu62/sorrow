@@ -1,8 +1,5 @@
 use crate::kb_to_b;
-use core::{
-    alloc::{GlobalAlloc, Layout},
-    ptr::null_mut,
-};
+
 use linked_list_allocator::LockedHeap;
 use x86_64::{
     structures::paging::{

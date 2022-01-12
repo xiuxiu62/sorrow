@@ -47,7 +47,7 @@ fn kernel_run(boot_info: &'static mut BootInfo) -> Result<(), String> {
     let drive = Drive::default();
     let data = drive.read(0, 1);
 
-    let formatted_data = data[0..256]
+    let formatted_data = data
         .iter()
         .map(|w| [(w >> 8) as u8, *w as u8])
         .flatten()

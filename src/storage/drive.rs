@@ -14,7 +14,7 @@ impl Drive {
     }
 
     /// Reads `total` sectors, starting from `lba` and returning a vector.
-    pub fn read<'a>(&self, lba: usize, total: usize) -> Vec<u16> {
+    pub fn read(&self, lba: usize, total: usize) -> Vec<u16> {
         let mut buffer = vec![0_u16; total * self.sector_size];
         self.read_to_buffer(lba, total, &mut buffer);
         buffer

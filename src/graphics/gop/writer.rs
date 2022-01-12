@@ -38,7 +38,7 @@ impl<'a> TextWriter<'a> {
         let width = info.horizontal_resolution / 8;
         let mut height = info.vertical_resolution / 8;
         // Reduce available rows to account for line gaps
-        let reserved_gap_pixels = height - 1 * vertical_line_gap;
+        let reserved_gap_pixels = (height - 1) * vertical_line_gap;
         height = height - (reserved_gap_pixels / 8) - 1;
         let dimensions = Position::new(width, height);
 
@@ -145,7 +145,7 @@ impl<'a> TextWriter<'a> {
 
     fn decrement_y(&mut self) {
         match self.position {
-            Position { x: _, y: 0 } => return,
+            Position { x: _, y: 0 } => (),
             Position { x: _, y } => self.position = Position::new(self.dimensions.x, y - 1),
         }
     }

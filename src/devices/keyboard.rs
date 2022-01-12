@@ -22,7 +22,7 @@ const SCANCODE_QUEUE_SIZE: usize = 100;
 /// Must not block or allocate.
 pub(crate) fn add_scancode(scancode: u8) {
     if let Ok(queue) = SCANCODE_QUEUE.try_get() {
-        if let Err(_) = queue.push(scancode) {
+        if queue.push(scancode).is_err() {
 
             // println!("WARNING: scancode queue full; dropping keyboard input");
         } else {
@@ -58,13 +58,13 @@ impl Stream for ScancodeStream {
             return Poll::Ready(Some(scancode));
         }
 
-        WAKER.register(&cx.waker());
+        WAKER.register(cx.waker());
         if let Some(scancode) = queue.pop() {
             WAKER.take();
             return Poll::Ready(Some(scancode));
         }
 
-        return Poll::Pending;
+        Poll::Pending
     }
 }
 

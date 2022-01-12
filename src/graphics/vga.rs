@@ -242,9 +242,9 @@ impl Writer {
         let position = self.row_position * BUFFER_WIDTH + self.column_position;
         unsafe {
             outb(0x3d4, 0x0f);
-            outb(0x3d5, (position as u8 & 0xff) as u8);
+            outb(0x3d5, position as u8);
             outb(0x3d4, 0x0e);
-            outb(0x3d5, ((position >> 8) as u8 & 0xff) as u8);
+            outb(0x3d5, (position >> 8) as u8);
         }
     }
 
