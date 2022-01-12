@@ -56,13 +56,14 @@ fn run(mut run_cmd: Command) {
     if !exit_status.success() {
         std::process::exit(exit_status.code().unwrap_or(1));
     }
-
 }
 
 fn test(mut run_cmd: Command) {
     run_cmd.args(TEST_ARGS);
 
-    let exit_status = runner_utils::run_with_timeout(&mut run_cmd, Duration::from_secs(TEST_TIMEOUT_SECS)).unwrap();
+    let exit_status =
+        runner_utils::run_with_timeout(&mut run_cmd, Duration::from_secs(TEST_TIMEOUT_SECS))
+            .unwrap();
     match exit_status.code() {
         Some(33) => return, // success
         other => panic!("Test failed (exit code: {:?})", other),

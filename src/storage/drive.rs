@@ -1,27 +1,20 @@
-use alloc::vec::Vec;
 use crate::io;
+use alloc::vec::Vec;
 
 pub const SECTOR_SIZE: usize = 256;
 
 pub struct Drive {
-    id: usize,
+    _id: usize,
     sector_size: usize,
 }
 
 impl Drive {
-    pub fn new(id: usize, sector_size: usize) -> Self {
-        Self {
-            id,
-            sector_size
-        }
+    pub fn new(_id: usize, sector_size: usize) -> Self {
+        Self { _id, sector_size }
     }
 
     /// Reads `total` sectors, starting from `lba` and returning a vector.
-    pub fn read<'a>(
-        &self,
-        lba: usize,
-        total: usize,
-    ) -> Vec<u16> {
+    pub fn read<'a>(&self, lba: usize, total: usize) -> Vec<u16> {
         let mut buffer = vec![0_u16; total * self.sector_size];
         self.read_to_buffer(lba, total, &mut buffer);
         buffer
@@ -48,7 +41,7 @@ impl Drive {
 
             // Read from disk
             for j in 0..self.sector_size {
-                buffer[i * self.sector_size + j] = unsafe { io::inw(0x1f0) }; 
+                buffer[i * self.sector_size + j] = unsafe { io::inw(0x1f0) };
             }
         }
     }
@@ -56,6 +49,6 @@ impl Drive {
 
 impl Default for Drive {
     fn default() -> Self {
-        Self::new(0, SECTOR_SIZE) 
+        Self::new(0, SECTOR_SIZE)
     }
 }

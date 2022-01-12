@@ -1,5 +1,5 @@
+use alloc::{sync::Arc, vec::Vec};
 use core::mem::size_of;
-use alloc::{vec::Vec, sync::Arc};
 use lazy_static::lazy_static;
 use spin::Mutex;
 
@@ -7,7 +7,7 @@ const BLOCK_SIZE: usize = 512;
 
 lazy_static! {
     static ref FILESYSTEM: Mutex<FileSystem<'static>> = Mutex::new(FileSystem::new(10, 100));
-} 
+}
 
 struct FileSystem<'a> {
     super_block: SuperBlock,
@@ -20,11 +20,10 @@ impl FileSystem<'_> {
         Self {
             super_block: SuperBlock::new(inode_count, block_count),
             head_block: Block::new(),
-            inodes: (0..inode_count)
-                .fold(vec![], |mut acc, _| {
-                    acc.push(INode::new("", 0));
-                    acc
-                }),
+            inodes: (0..inode_count).fold(vec![], |mut acc, _| {
+                acc.push(INode::new("", 0));
+                acc
+            }),
         }
     }
 }
@@ -34,13 +33,13 @@ struct SuperBlock {
     inode_count: usize,
     block_count: usize,
     block_size: usize,
-} 
+}
 
 impl SuperBlock {
     pub fn new(inode_count: usize, block_count: usize) -> Self {
         Self {
-            inode_count, 
-            block_count, 
+            inode_count,
+            block_count,
             block_size: size_of::<Block>(),
         }
     }
@@ -56,7 +55,7 @@ impl SuperBlock {
 
 struct Block {
     data: [u8; BLOCK_SIZE],
-    next: Option<Arc<Block>>
+    next: Option<Arc<Block>>,
 }
 
 impl Block {
@@ -75,9 +74,6 @@ struct INode<'a> {
 
 impl<'a> INode<'a> {
     pub fn new(name: &'a str, size: usize) -> Self {
-        Self {
-            name, 
-            size
-        }
+        Self { name, size }
     }
 }

@@ -23,4 +23,3 @@ pub unsafe fn outw(port: u16, val: u16) {
 pub unsafe fn outl(port: u16, val: u32) {
     u32::write_to_port(port, val);
 }
-

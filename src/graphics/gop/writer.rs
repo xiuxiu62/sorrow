@@ -4,7 +4,8 @@ use super::{
 };
 use alloc::{
     fmt::{self, Write},
-    vec::Vec, string::{ToString, String},
+    string::{String, ToString},
+    vec::Vec,
 };
 use bootloader::boot_info::{FrameBuffer, Optional};
 use font8x8::UnicodeFonts;
@@ -15,8 +16,11 @@ use spin::Mutex;
 /// Used by the `print!` and `println!` macros.
 static TEXT_WRITER: Mutex<Option<TextWriter>> = Mutex::new(None);
 
-pub fn init(frame_buffer: &'static mut Optional<FrameBuffer>) -> Result<(), String> {
-    *TEXT_WRITER.lock() = Some(TextWriter::try_new(frame_buffer)?);
+pub fn init(
+    frame_buffer: &'static mut Optional<FrameBuffer>,
+    vertical_line_gap: usize,
+) -> Result<(), String> {
+    *TEXT_WRITER.lock() = Some(TextWriter::try_new(frame_buffer, vertical_line_gap)?);
     TEXT_WRITER.lock().as_mut().unwrap().clear();
     Ok(())
 }
@@ -29,22 +33,29 @@ pub struct TextWriter<'a> {
 }
 
 impl<'a> TextWriter<'a> {
-    pub fn new(frame_buffer: &'a mut FrameBuffer) -> Self {
+    pub fn new(frame_buffer: &'a mut FrameBuffer, vertical_line_gap: usize) -> Self {
         let info = frame_buffer.info();
-        let dimensions =
-            Position::new(info.horizontal_resolution / 8, info.vertical_resolution / 8);
+        let width = info.horizontal_resolution / 8;
+        let mut height = info.vertical_resolution / 8;
+        // Reduce available rows to account for line gaps
+        let reserved_gap_pixels = height - 1 * vertical_line_gap;
+        height = height - (reserved_gap_pixels / 8) - 1;
+        let dimensions = Position::new(width, height);
 
         Self {
-            front: FrontBuffer::new(frame_buffer),
+            front: FrontBuffer::new(frame_buffer, vertical_line_gap),
             back: BackBuffer::new(dimensions),
             position: Position::default(),
             dimensions,
         }
     }
 
-    pub fn try_new(frame_buffer: &'a mut Optional<FrameBuffer>) -> Result<Self, String> {
+    pub fn try_new(
+        frame_buffer: &'a mut Optional<FrameBuffer>,
+        vertical_line_gap: usize,
+    ) -> Result<Self, String> {
         match frame_buffer {
-            Optional::Some(frame_buffer) => Ok(Self::new(frame_buffer)),
+            Optional::Some(frame_buffer) => Ok(Self::new(frame_buffer, vertical_line_gap)),
             Optional::None => Err("Failed to acquire frame buffer handle".to_string()),
         }
     }
@@ -152,11 +163,17 @@ impl Write for TextWriter<'_> {
     }
 }
 
-struct FrontBuffer<'a>(Buffer<'a>);
+struct FrontBuffer<'a> {
+    inner: Buffer<'a>,
+    vertical_line_gap: usize,
+}
 
 impl<'a> FrontBuffer<'a> {
-    pub fn new(frame_buffer: &'a mut FrameBuffer) -> Self {
-        Self(Buffer::new(frame_buffer))
+    pub fn new(frame_buffer: &'a mut FrameBuffer, vertical_line_gap: usize) -> Self {
+        Self {
+            inner: Buffer::new(frame_buffer),
+            vertical_line_gap,
+        }
     }
 
     fn put_char(&mut self, c: char, position: Position) {
@@ -191,19 +208,21 @@ impl<'a> FrontBuffer<'a> {
     }
 
     fn get_offset(&self, position: Position) -> Position {
-        Position::new(position.x * 8, position.y * 8)
+        let x = position.x * 8;
+        let y = (position.y * 8) + (position.y * self.vertical_line_gap);
+        Position::new(x, y)
     }
 }
 
 impl<'a> AsRef<Buffer<'a>> for FrontBuffer<'a> {
     fn as_ref(&self) -> &Buffer<'a> {
-        &self.0
+        &self.inner
     }
 }
 
 impl<'a> AsMut<Buffer<'a>> for FrontBuffer<'a> {
     fn as_mut(&mut self) -> &mut Buffer<'a> {
-        &mut self.0
+        &mut self.inner
     }
 }
 

@@ -6,9 +6,13 @@
 
 extern crate alloc;
 
-use alloc::{vec, string::String};
+use alloc::{
+    format,
+    string::{String, ToString},
+    vec::{self, Vec},
+};
 use bootloader::{entry_point, BootInfo};
-use core::{panic::PanicInfo};
+use core::panic::PanicInfo;
 use lib_sorrow::{
     self,
     devices::{self, keyboard::Keyboard},
@@ -31,35 +35,45 @@ entry_point!(kernel_main);
 
 fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     match kernel_run(boot_info) {
-        Ok(()) => lib_sorrow::hlt_loop(), 
-        Err(message) => panic!("{message}"),        
+        Ok(()) => lib_sorrow::hlt_loop(),
+        Err(message) => panic!("{message}"),
     }
 }
 
 fn kernel_run(boot_info: &'static mut BootInfo) -> Result<(), String> {
-    lib_sorrow::init(boot_info)?; 
+    lib_sorrow::init(boot_info)?;
 
-    // Initialize drive and read some data  
+    // Initialize drive and read some data
     let drive = Drive::default();
     let data = drive.read(0, 1);
 
+    let formatted_data = data[0..256]
+        .iter()
+        .map(|w| [(w >> 8) as u8, *w as u8])
+        .flatten()
+        .filter(|b| *b > 31 && *b < 127)
+        .map(|b| b as char)
+        .fold(String::new(), |acc, c| acc + format!("{c}").as_str());
+
     println!("hello world");
+    println!("Some drive data: {:?}", formatted_data);
 
     #[cfg(test)]
     test_main();
 
+    Ok(())
 
     // Create and spawn tasks
-    let mut executor = Executor::new(TASK_QUEUE_SIZE);
-    let tasks = vec![
-        Task::new(print_number(42)),
-        // Task::new(crate::devices::keyboard::listen()),
-    ];
-    for task in tasks {
-        executor.spawn(task)?;
-    }
+    // let mut executor = Executor::new(TASK_QUEUE_SIZE);
+    // let tasks = vec![
+    // Task::new(print_number(42)),
+    // // Task::new(crate::devices::keyboard::listen()),
+    // ];
+    // for task in tasks {
+    //     executor.spawn(task)?;
+    // }
 
-    executor.run();
+    // executor.run();
 }
 
 async fn print_number(n: u32) {

@@ -43,7 +43,7 @@ pub fn init(boot_info: &'static mut BootInfo) -> Result<(), String> {
 
     // interrupts::enable();
 
-    graphics::gop::init(&mut boot_info.framebuffer)
+    graphics::gop::init(&mut boot_info.framebuffer, 2)
 }
 
 pub fn hlt_loop() -> ! {

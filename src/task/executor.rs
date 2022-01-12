@@ -1,6 +1,6 @@
 use super::{Task, TaskId};
 use crate::interrupts;
-use alloc::{collections::BTreeMap, sync::Arc, task::Wake, string::String};
+use alloc::{collections::BTreeMap, string::String, sync::Arc, task::Wake};
 use core::task::{Context, Poll, Waker};
 use crossbeam_queue::ArrayQueue;
 
@@ -62,7 +62,7 @@ impl Executor {
 
         match self.task_queue.push(task_id) {
             Ok(()) => Ok(()),
-            Err(task_id) => Err(format!("Failed to queue task {task_id}")) 
+            Err(task_id) => Err(format!("Failed to queue task {task_id}")),
         }
     }
 
