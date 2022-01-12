@@ -1,8 +1,7 @@
 use core::mem::size_of;
-use alloc::{vec::Vec, rc::Rc, sync::Arc};
+use alloc::{vec::Vec, sync::Arc};
 use lazy_static::lazy_static;
 use spin::Mutex;
-use crate::util::PushReturn;
 
 const BLOCK_SIZE: usize = 512;
 

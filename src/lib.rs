@@ -27,7 +27,6 @@ pub mod memory;
 pub mod serial;
 pub mod storage;
 pub mod task;
-pub mod util;
 
 pub fn init(boot_info: &'static mut BootInfo) -> Result<(), String> {
     gdt::init();

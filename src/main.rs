@@ -39,10 +39,9 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 fn kernel_run(boot_info: &'static mut BootInfo) -> Result<(), String> {
     lib_sorrow::init(boot_info)?; 
 
-    // Initialize devices
+    // Initialize drive and read some data  
     let drive = Drive::default();
-    // Read some data
-    let mut buf = unsafe { drive.read_sector(0, 1)? };
+    let data = drive.read(0, 1);
 
     println!("hello world");
 
