@@ -1,14 +1,19 @@
 #![no_std]
 #![no_main]
 #![feature(custom_test_frameworks)]
-#![test_runner(sorrow::test_runner)]
+#![test_runner(lib_sorrow::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
 extern crate alloc;
 
+use alloc::string::ToString;
+use alloc::vec;
 use alloc::{format, string::String};
 use bootloader::{entry_point, BootInfo};
 use core::panic::PanicInfo;
+use lib_sorrow::memory::BootInfoFrameAllocator;
+use lib_sorrow::task::executor::Executor;
+use lib_sorrow::task::Task;
 use lib_sorrow::{
     self,
     // devices::{self, keyboard::Keyboard},
@@ -38,7 +43,7 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 }
 
 fn kernel_run(boot_info: &'static mut BootInfo) -> Result<(), String> {
-    lib_sorrow::init(boot_info)?;
+    kernel_init(boot_info)?;
 
     // Initialize drive and read some data
     let drive = Drive::default();
@@ -55,22 +60,39 @@ fn kernel_run(boot_info: &'static mut BootInfo) -> Result<(), String> {
     println!("hello world");
     println!("Some drive data: {:?}", formatted_data);
 
-    #[cfg(test)]
-    test_main();
-
     Ok(())
 
     // Create and spawn tasks
     // let mut executor = Executor::new(TASK_QUEUE_SIZE);
     // let tasks = vec![
-    // Task::new(print_number(42)),
-    // // Task::new(crate::devices::keyboard::listen()),
+    //     Task::new(print_number(42)),
+    //     Task::new(lib_sorrow::devices::keyboard::listen()),
     // ];
     // for task in tasks {
     //     executor.spawn(task)?;
     // }
 
     // executor.run();
+}
+
+fn kernel_init(boot_info: &'static mut BootInfo) -> Result<(), String> {
+    lib_sorrow::gdt::init();
+    lib_sorrow::interrupts::init();
+
+    // Initialize paging
+    let mut mapper = unsafe { lib_sorrow::memory::init(boot_info.physical_memory_offset) }?;
+    let mut frame_allocator = unsafe { BootInfoFrameAllocator::init(&boot_info.memory_regions) };
+    if lib_sorrow::allocator::init_heap(&mut mapper, &mut frame_allocator).is_err() {
+        return Err("Failed to initialize heap".to_string());
+    };
+
+    lib_sorrow::graphics::gop::init(&mut boot_info.framebuffer, 2)?;
+    // lib_sorrow::interrupts::enable();
+
+    #[cfg(test)]
+    test_main();
+
+    Ok(())
 }
 
 async fn print_number(n: u32) {

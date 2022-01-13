@@ -1,20 +1,18 @@
 #![no_std]
 #![cfg_attr(test, no_main)]
-#![feature(custom_test_frameworks)]
-#![feature(abi_x86_interrupt)]
-#![feature(alloc_error_handler)]
-#![feature(const_mut_refs)]
-#![feature(in_band_lifetimes)]
+#![feature(
+    abi_x86_interrupt,
+    alloc_error_handler,
+    const_mut_refs,
+    custom_test_frameworks
+)]
 #![test_runner(test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
 #[macro_use]
 extern crate alloc;
 
-use alloc::string::{String, ToString};
-use bootloader::boot_info::BootInfo;
 use core::panic::PanicInfo;
-use memory::BootInfoFrameAllocator;
 use x86_64::instructions;
 
 pub mod allocator;
@@ -27,23 +25,6 @@ pub mod memory;
 pub mod serial;
 pub mod storage;
 pub mod task;
-
-pub fn init(boot_info: &'static mut BootInfo) -> Result<(), String> {
-    gdt::init();
-    interrupts::init();
-    // interrupts::disable();
-
-    // Try to initialize paging
-    let mut mapper = unsafe { memory::init(boot_info.physical_memory_offset) }?;
-    let mut frame_allocator = unsafe { BootInfoFrameAllocator::init(&boot_info.memory_regions) };
-    if allocator::init_heap(&mut mapper, &mut frame_allocator).is_err() {
-        return Err("Failed to initialize heap".to_string());
-    }
-
-    // interrupts::enable();
-
-    graphics::gop::init(&mut boot_info.framebuffer, 2)
-}
 
 pub fn hlt_loop() -> ! {
     loop {
@@ -102,22 +83,44 @@ fn alloc_error_handler(layout: alloc::alloc::Layout) -> ! {
     panic!("Alloc error: {layout:?}")
 }
 
-/// Entry point for `cargo ktest`
-#[cfg(test)]
-fn test_kernel_main(_boot_info: &'static mut BootInfo) -> ! {
-    test_main();
-    hlt_loop();
-}
-
 #[cfg(test)]
 mod tests {
-    use super::{test_kernel_main, test_panic_handler, PanicInfo};
-    use bootloader::entry_point;
+    use super::*;
+    use bootloader::{entry_point, BootInfo};
 
     entry_point!(test_kernel_main);
+
+    /// Entry point for `cargo ktest`
+    fn test_kernel_main(_boot_info: &'static mut BootInfo) -> ! {
+        test_main();
+        hlt_loop();
+    }
 
     #[panic_handler]
     fn panic(info: &PanicInfo) -> ! {
         test_panic_handler(info)
     }
 }
+
+// #[cfg(test)]
+// use bootloader::BootInfo;
+
+// /// Entry point for `cargo ktest`
+// #[cfg(test)]
+// fn test_kernel_main(_boot_info: &'static mut BootInfo) -> ! {
+//     test_main();
+//     hlt_loop();
+// }
+
+// #[cfg(test)]
+// mod tests {
+//     use super::{test_kernel_main, test_panic_handler, PanicInfo};
+//     use bootloader::entry_point;
+
+//     entry_point!(test_kernel_main);
+
+//     #[panic_handler]
+//     fn panic(info: &PanicInfo) -> ! {
+//         test_panic_handler(info)
+//     }
+// }

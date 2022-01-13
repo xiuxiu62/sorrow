@@ -5,7 +5,7 @@
 #![reexport_test_harness_main = "test_main"]
 
 use core::panic::PanicInfo;
-use sorrow::println;
+use lib_sorrow::println;
 
 #[no_mangle]
 pub extern "C" fn _start() -> ! {

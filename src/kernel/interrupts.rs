@@ -1,4 +1,4 @@
-use crate::{devices::keyboard, gdt, io, println};
+use crate::{devices::keyboard, gdt, io, println, serial_println};
 use lazy_static::lazy_static;
 use pic8259::ChainedPics;
 use spin;
@@ -27,9 +27,6 @@ impl InterruptIndex {
     }
 }
 
-pub static PICS: spin::Mutex<ChainedPics> =
-    spin::Mutex::new(unsafe { ChainedPics::new(PIC_1_OFFSET, PIC_2_OFFSET) });
-
 lazy_static! {
     static ref IDT: InterruptDescriptorTable = {
         let mut idt = InterruptDescriptorTable::new();
@@ -43,6 +40,8 @@ lazy_static! {
         idt[InterruptIndex::Keyboard.as_usize()].set_handler_fn(keyboard_interrupt_handler);
         idt
     };
+    static ref PICS: spin::Mutex<ChainedPics> =
+        spin::Mutex::new(unsafe { ChainedPics::new(PIC_1_OFFSET, PIC_2_OFFSET) });
 }
 
 pub fn init() {
