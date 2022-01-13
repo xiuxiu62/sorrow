@@ -12,8 +12,8 @@ members = ["crates/*/", "src/boot"]
 exclude = ["crates"]
 
 [dependencies]
-# bootloader =  { version = "0.10.11", path="./crates/bootloader" }
-bootloader = "0.10.11"
+bootloader =  { version = "0.10.11", path="./crates/bootloader" }
+# bootloader = "0.10.11"
 conquer-once = { version = "0.3.2", default-features = false }
 crossbeam-queue = { version = "0.3.2", features = ["alloc"], default-features = false }
 font8x8 = { version = "0.3.1", features = ["unicode"], default-features = false }

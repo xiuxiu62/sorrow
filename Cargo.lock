@@ -26,8 +26,6 @@ dependencies = [
 [[package]]
 name = "bootloader"
 version = "0.10.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d1f59a0a451dcca424e0e728277a78e6f0ebac4cf1c267ad4b9c49d53c73ee15"
 
 [[package]]
 name = "bootloader-locator"
