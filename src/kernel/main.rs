@@ -1,25 +1,22 @@
 #![no_std]
 #![no_main]
 #![feature(custom_test_frameworks)]
-#![test_runner(lib_sorrow::test_runner)]
+#![test_runner(sorrow::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
 extern crate alloc;
 
-use alloc::{
-    format,
-    string::{String, ToString},
-    vec::{self, Vec},
-};
+use alloc::{format, string::String};
 use bootloader::{entry_point, BootInfo};
 use core::panic::PanicInfo;
 use lib_sorrow::{
     self,
-    devices::{self, keyboard::Keyboard},
+    // devices::{self, keyboard::Keyboard},
     println,
     storage::drive::Drive,
-    task::{executor::Executor, Task},
+    // task::{executor::Executor, Task},
 };
+
 // use pc_keyboard::{layouts::Us104Key, HandleControl, ScancodeSet1};
 // use spin::Mutex;
 

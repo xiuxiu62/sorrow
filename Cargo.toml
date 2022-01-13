@@ -2,20 +2,18 @@
 name = "sorrow"
 version = "0.1.0"
 edition = "2021"
+exclude = ["crates"]
+license = "BSD3"
+repository = "https://github.com/xiuxiu62/sorrow"
+readme = "README.md"
 
 [workspace]
-members = ["boot"]
-
-[lib]
-name = "lib_sorrow"
-path = "src/lib.rs"
-
-[[test]]
-name = "should_panic"
-harness = false
+members = ["crates/*/", "src/boot"]
+exclude = ["crates"]
 
 [dependencies]
-bootloader =  "0.10.10"
+# bootloader =  { version = "0.10.11", path="./crates/bootloader" }
+bootloader = "0.10.11"
 conquer-once = { version = "0.3.2", default-features = false }
 crossbeam-queue = { version = "0.3.2", features = ["alloc"], default-features = false }
 font8x8 = { version = "0.3.1", features = ["unicode"], default-features = false }
@@ -33,3 +31,17 @@ x86_64 = "0.14.7"
 map-physical-memory = true
 map-page-table-recursively = true
 map-framebuffer = true
+
+# Kernel lib
+[lib]
+name = "lib_sorrow"
+path = "src/kernel/lib.rs"
+
+# Kernel main
+[[bin]]
+name = "sorrow"
+path = "src/kernel/main.rs"
+
+[[test]]
+name = "should_panic"
+harness = false

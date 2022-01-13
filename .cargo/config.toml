@@ -1,15 +1,11 @@
-# [unstable]
-# build-std = ["core", "compiler_builtins", "alloc"]
-# build-std-features = ["compiler-builtins-mem"]
-
-# [build]
-# target = "x86_64-sorrow.json"
-
 [target.'cfg(target_os = "none")']
 runner = "cargo run --package boot --"
 
 [alias]
 kbuild = "build --target x86_64-sorrow.json -Zbuild-std=core,compiler_builtins,alloc -Zbuild-std-features=compiler-builtins-mem"
+kbuild-release = "build --release --target x86_64-sorrow.json -Zbuild-std=core,compiler_builtins,alloc -Zbuild-std-features=compiler-builtins-mem"
 kimage = "run --target x86_64-sorrow.json -Zbuild-std=core,compiler_builtins,alloc -Zbuild-std-features=compiler-builtins-mem -- --no-run"
 krun = "run --target x86_64-sorrow.json -Zbuild-std=core,compiler_builtins,alloc -Zbuild-std-features=compiler-builtins-mem"
+krun-release = "run --release --target x86_64-sorrow.json -Zbuild-std=core,compiler_builtins,alloc -Zbuild-std-features=compiler-builtins-mem"
 ktest = "test --target x86_64-sorrow.json -Zbuild-std=core,compiler_builtins,alloc -Zbuild-std-features=compiler-builtins-mem"
+kcheck = "check --target x86_64-sorrow.json -Zbuild-std=core,compiler_builtins,alloc -Zbuild-std-features=compiler-builtins-mem"
