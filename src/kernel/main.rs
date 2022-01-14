@@ -3,25 +3,23 @@
 #![feature(custom_test_frameworks)]
 #![test_runner(lib_sorrow::test_runner)]
 #![reexport_test_harness_main = "test_main"]
+#![allow(dead_code)]
 
 extern crate alloc;
 
 use alloc::string::ToString;
-use alloc::vec;
 use alloc::{format, string::String};
 use bootloader::{entry_point, BootInfo};
 use core::panic::PanicInfo;
-use lib_sorrow::memory::BootInfoFrameAllocator;
-use lib_sorrow::task::executor::Executor;
-use lib_sorrow::task::Task;
+use lib_sorrow::serial_println;
 use lib_sorrow::{
     self,
+    memory::BootInfoFrameAllocator,
     // devices::{self, keyboard::Keyboard},
     println,
     storage::drive::Drive,
     // task::{executor::Executor, Task},
 };
-
 // use pc_keyboard::{layouts::Us104Key, HandleControl, ScancodeSet1};
 // use spin::Mutex;
 
@@ -46,19 +44,19 @@ fn kernel_run(boot_info: &'static mut BootInfo) -> Result<(), String> {
     kernel_init(boot_info)?;
 
     // Initialize drive and read some data
-    let drive = Drive::default();
-    let data = drive.read(0, 1);
+    // let drive = Drive::default();
+    // let data = drive.read(0, 1);
 
-    let formatted_data = data
-        .iter()
-        .map(|w| [(w >> 8) as u8, *w as u8])
-        .flatten()
-        .filter(|b| *b > 31 && *b < 127)
-        .map(|b| b as char)
-        .fold(String::new(), |acc, c| acc + format!("{c}").as_str());
+    // let formatted_data = data
+    //     .iter()
+    //     .map(|w| [(w >> 8) as u8, *w as u8])
+    //     .flatten()
+    //     .filter(|b| *b > 31 && *b < 127)
+    //     .map(|b| b as char)
+    //     .fold(String::new(), |acc, c| acc + format!("{c}").as_str());
 
     println!("hello world");
-    println!("Some drive data: {:?}", formatted_data);
+    // println!("Some drive data: {:?}", formatted_data);
 
     Ok(())
 
@@ -76,8 +74,11 @@ fn kernel_run(boot_info: &'static mut BootInfo) -> Result<(), String> {
 }
 
 fn kernel_init(boot_info: &'static mut BootInfo) -> Result<(), String> {
+    serial_println!("test");
     lib_sorrow::gdt::init();
-    lib_sorrow::interrupts::init();
+    lib_sorrow::interrupts::idt_init();
+    lib_sorrow::interrupts::pics_init();
+    // lib_sorrow::interrupts::enable();
 
     // Initialize paging
     let mut mapper = unsafe { lib_sorrow::memory::init(boot_info.physical_memory_offset) }?;
@@ -87,7 +88,6 @@ fn kernel_init(boot_info: &'static mut BootInfo) -> Result<(), String> {
     };
 
     lib_sorrow::graphics::gop::init(&mut boot_info.framebuffer, 2)?;
-    // lib_sorrow::interrupts::enable();
 
     #[cfg(test)]
     test_main();

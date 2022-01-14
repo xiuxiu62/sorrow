@@ -1,4 +1,4 @@
-use crate::{graphics::gop::Direction, move_cursor, print};
+use crate::{graphics::gop::Direction, move_cursor, print, println};
 use conquer_once::spin::OnceCell;
 use core::{
     pin::Pin,
@@ -21,16 +21,20 @@ const SCANCODE_QUEUE_SIZE: usize = 100;
 ///
 /// Must not block or allocate.
 pub(crate) fn add_scancode(scancode: u8) {
-    if let Ok(queue) = SCANCODE_QUEUE.try_get() {
-        if queue.push(scancode).is_err() {
-
-            // println!("WARNING: scancode queue full; dropping keyboard input");
-        } else {
-            WAKER.wake();
+    let queue = match SCANCODE_QUEUE.try_get() {
+        Ok(queue) => queue,
+        Err(_) => {
+            println!("WARNING: scancode queue uninitialized");
+            return;
         }
-    } else {
-        // println!("WARNING: scancode queue uninitialized");
-    }
+    };
+
+    if queue.push(scancode).is_err() {
+        println!("WARNING: scancode queue full; dropping keyboard input");
+        return;
+    };
+
+    WAKER.wake();
 }
 
 pub struct ScancodeStream {
@@ -109,28 +113,28 @@ pub fn init_us_keyboard() -> Keyboard<layouts::Us104Key, ScancodeSet1> {
     Keyboard::new(layouts::Us104Key, ScancodeSet1, HandleControl::Ignore)
 }
 
-pub async fn listen() {
-    let mut keyboard =
-        pc_keyboard::Keyboard::new(layouts::Us104Key, ScancodeSet1, HandleControl::Ignore);
-    let mut stream = ScancodeStream::new();
-    while let Some(scancode) = stream.next().await {
-        if let Ok(Some(key_event)) = keyboard.add_byte(scancode) {
-            if let Some(key) = keyboard.process_keyevent(key_event) {
-                handle_keypress(key).await;
-            }
-        }
-    }
-}
+// pub async fn listen() {
+//     let mut keyboard =
+//         pc_keyboard::Keyboard::new(layouts::Us104Key, ScancodeSet1, HandleControl::Ignore);
+//     let mut stream = ScancodeStream::new();
+//     while let Some(scancode) = stream.next().await {
+//         if let Ok(Some(key_event)) = keyboard.add_byte(scancode) {
+//             if let Some(key) = keyboard.process_keyevent(key_event) {
+//                 handle_keypress(key).await;
+//             }
+//         }
+//     }
+// }
 
-async fn handle_keypress(key: DecodedKey) {
-    match key {
-        DecodedKey::Unicode(key) => print!("{key}"),
-        DecodedKey::RawKey(key) => match key {
-            KeyCode::ArrowLeft => move_cursor!(Direction::Left),
-            KeyCode::ArrowRight => move_cursor!(Direction::Right),
-            KeyCode::ArrowUp => move_cursor!(Direction::Up),
-            KeyCode::ArrowDown => move_cursor!(Direction::Down),
-            _ => print!("{key:?}"),
-        },
-    }
-}
+// async fn handle_keypress(key: DecodedKey) {
+//     match key {
+//         DecodedKey::Unicode(key) => print!("{key}"),
+//         DecodedKey::RawKey(key) => match key {
+//             KeyCode::ArrowLeft => move_cursor!(Direction::Left),
+//             KeyCode::ArrowRight => move_cursor!(Direction::Right),
+//             KeyCode::ArrowUp => move_cursor!(Direction::Up),
+//             KeyCode::ArrowDown => move_cursor!(Direction::Down),
+//             _ => print!("{key:?}"),
+//         },
+//     }
+// }

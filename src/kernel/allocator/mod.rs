@@ -1,4 +1,4 @@
-use crate::kb_to_b;
+use crate::kb;
 
 use linked_list_allocator::LockedHeap;
 use x86_64::{
@@ -15,7 +15,7 @@ pub mod linked_list;
 #[global_allocator]
 static ALLOCATOR: LockedHeap = LockedHeap::empty();
 pub const HEAP_START: usize = 0x_4444_4444_0000;
-pub const HEAP_SIZE: usize = kb_to_b!(100);
+pub const HEAP_SIZE: usize = kb!(100);
 
 pub fn init_heap(
     mapper: &mut impl Mapper<Size4KiB>,
