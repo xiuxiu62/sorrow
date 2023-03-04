@@ -1,11 +1,9 @@
-[target.'cfg(target_os = "none")']
-runner = "cargo run --package boot --"
+[unstable]
+# enable the unstable artifact-dependencies feature, see
+# https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#artifact-dependencies
+bindeps = true
+sparse-registry = true
 
-[alias]
-kbuild = "build --target x86_64-sorrow.json -Zbuild-std=core,compiler_builtins,alloc -Zbuild-std-features=compiler-builtins-mem"
-kbuild-release = "build --release --target x86_64-sorrow.json -Zbuild-std=core,compiler_builtins,alloc -Zbuild-std-features=compiler-builtins-mem"
-kimage = "run --target x86_64-sorrow.json -Zbuild-std=core,compiler_builtins,alloc -Zbuild-std-features=compiler-builtins-mem -- --no-run"
-krun = "run --target x86_64-sorrow.json -Zbuild-std=core,compiler_builtins,alloc -Zbuild-std-features=compiler-builtins-mem"
-krun-release = "run --release --target x86_64-sorrow.json -Zbuild-std=core,compiler_builtins,alloc -Zbuild-std-features=compiler-builtins-mem"
-ktest = "test --target x86_64-sorrow.json -Zbuild-std=core,compiler_builtins,alloc -Zbuild-std-features=compiler-builtins-mem"
-kcheck = "check --target x86_64-sorrow.json -Zbuild-std=core,compiler_builtins,alloc -Zbuild-std-features=compiler-builtins-mem"
+# [alias]
+# xtask = "run --package xtask --"
+# run = "xtask run"

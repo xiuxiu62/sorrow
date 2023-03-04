@@ -2,44 +2,35 @@
 name = "sorrow"
 version = "0.1.0"
 edition = "2021"
-exclude = ["crates"]
-license = "BSD3"
-repository = "https://github.com/xiuxiu62/sorrow"
-readme = "README.md"
+
+[[bin]]
+name = "os-qemu"
+path = "boot/main.rs"
 
 [workspace]
-members = ["crates/*/", "src/boot"]
-exclude = ["crates"]
+members = ["kernel"]
+
+[build-dependencies]
+bootloader = "0.11" 
+kernel = { path = "kernel", artifact = "bin", target = "x86_64-unknown-none" }
+# kernel = { path = "kernel", artifact = "bin" }
+
+# [build-dependencies.kernel]
+# path = "kernel"
+# artifact = "bin"
+# target = "x86_64-unknown-none"
 
 [dependencies]
-bootloader =  { version = "0.10.11", path="./crates/bootloader" }
-conquer-once = { version = "0.3.2", default-features = false }
-crossbeam-queue = { version = "0.3.2", features = ["alloc"], default-features = false }
-font8x8 = { version = "0.3.1", features = ["unicode"], default-features = false }
-futures-util = { version = "0.3.19", features = ["alloc"], default-features = false }
-lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
-linked_list_allocator = "0.9.1"
-pc-keyboard = "0.5.1"
-pic8259 = "0.10.2"
-spin = "0.9.2"
-uart_16550 = "0.2.15"
-volatile = "0.4.4"
-x86_64 = { version = "0.14.7", features = ["const_fn", "inline_asm", "abi_x86_interrupt", "nightly"] }
+fontdue = { version = "0.7.2", default-features = false }
+# used for UEFI booting in QEMU
+ovmf-prebuilt = "0.1.0-alpha.1"
+ttf-parser = { version = "0.18.1", default-features = false }
 
-[package.metadata.bootloader]
-map-physical-memory = true
-map-framebuffer = true
+# [profile.dev]
+# panic = "abort"
 
-# Kernel lib
-[lib]
-name = "lib_sorrow"
-path = "src/kernel/lib.rs"
-
-# Kernel main
-[[bin]]
-name = "sorrow"
-path = "src/kernel/main.rs"
-
-[[test]]
-name = "should_panic"
-harness = false
+# [profile.release]
+# opt-level = "s"
+# strip = "debuginfo"
+# lto = "thin"
+# panic = "abort"
