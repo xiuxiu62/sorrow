@@ -472,17 +472,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b7e5500299e16ebb147ae15a00a942af264cf3688f47923b8fc2cd5858f23ad3"
 
 [[package]]
-name = "os"
-version = "0.1.0"
-dependencies = [
- "bootloader",
- "fontdue",
- "kernel",
- "ovmf-prebuilt",
- "ttf-parser 0.18.1",
-]
-
-[[package]]
 name = "ovmf-prebuilt"
 version = "0.1.0-alpha.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -600,6 +589,17 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "sorrow"
+version = "0.1.0"
+dependencies = [
+ "bootloader",
+ "fontdue",
+ "kernel",
+ "ovmf-prebuilt",
+ "ttf-parser 0.18.1",
 ]
 
 [[package]]

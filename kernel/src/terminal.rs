@@ -11,7 +11,7 @@ pub struct Terminal<'a> {
 
 impl<'a> Terminal<'a> {
     pub fn new(graphic_device: Rc<RefCell<dyn GraphicsDevice>>) -> Self {
-        let font = Font::new(include_bytes!("../../data/fonts/8-bit.ttf"), 40).unwrap();
+        let font = Font::new(include_bytes!("../../data/fonts/Roboto-Regular.ttf"), 40).unwrap();
         let background = Color::Black;
         let foreground = Color::White;
         graphic_device.borrow_mut().fill(background);

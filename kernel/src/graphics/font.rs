@@ -40,7 +40,6 @@ impl<'a> Font<'a> {
 
             Some(Self {
                 inner,
-                // height: height as usize,
                 scale,
                 offset,
                 size,
@@ -91,7 +90,7 @@ impl<'a> Font<'a> {
 
 impl<'a> Default for Font<'a> {
     fn default() -> Self {
-        Self::new(include_bytes!("../../../data/fonts/8-bit.ttf"), 12).unwrap()
+        Self::new(include_bytes!("../../../data/fonts/Roboto-Regular.ttf"), 12).unwrap()
     }
 }
 
