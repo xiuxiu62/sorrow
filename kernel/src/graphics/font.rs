@@ -1,62 +1,84 @@
-use alloc::vec::Vec;
-use rusttype::{Point, PositionedGlyph, Scale};
+use alloc::{slice, vec::Vec};
+use rusttype::{Point, Scale};
 
 // A 2-dimensional map of grayscale pixels
+#[derive(Debug)]
 pub struct PixelMap {
-    inner: Vec<u32>,
-    pub width: usize,
-    pub height: usize,
+    pub dimensions: Point<usize>,
+    inner: Vec<Pixel>,
 }
 
 impl PixelMap {
     pub fn new(width: usize, height: usize) -> Self {
         Self {
-            inner: vec![0; width * height],
-            width,
-            height,
+            dimensions: Point {
+                x: width,
+                y: height,
+            },
+            inner: vec![],
         }
     }
 
-    pub fn as_ref(&self) -> &[u32] {
-        &self.inner
+    pub fn push(&mut self, x: i32, y: i32, color: u32) {
+        self.inner.push(Pixel::new(x, y, color))
+    }
+
+    pub fn iter(&self) -> slice::Iter<Pixel> {
+        self.inner.iter()
     }
 }
 
+#[derive(Debug)]
+pub struct Pixel {
+    pub position: Point<i32>,
+    pub color: u32,
+}
+
+impl Pixel {
+    pub fn new(x: i32, y: i32, color: u32) -> Self {
+        Self {
+            position: Point { x, y },
+            color,
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct Font<'a> {
     inner: rusttype::Font<'a>,
-    size: usize,
+    height: usize,
     scale: Scale,
     offset: Point<f32>,
 }
 
 impl<'a> Font<'a> {
-    pub fn new(font_data: &'a [u8], size: usize) -> Option<Self> {
+    pub fn new(font_data: &'a [u8], height: usize) -> Option<Self> {
         rusttype::Font::try_from_bytes(font_data).map(|inner| {
             let scale = Scale {
-                x: size as f32,
-                y: size as f32,
+                x: height as f32,
+                y: height as f32,
             };
             let v_metrics = inner.v_metrics(scale);
             let offset = rusttype::point(0.0, v_metrics.ascent);
 
             Self {
                 inner,
+                height,
                 scale,
                 offset,
-                size,
             }
         })
     }
 
-    pub fn update_size(&mut self, size: usize) {
+    pub fn update_height(&mut self, height: usize) {
         let scale = Scale {
-            x: size as f32,
-            y: size as f32,
+            x: height as f32,
+            y: height as f32,
         };
         let v_metrics = self.inner.v_metrics(scale);
 
         self.offset = rusttype::point(0.0, v_metrics.ascent);
-        self.size = size;
+        self.height = height;
     }
 
     pub fn rasterize(&self, char: char) -> PixelMap {
@@ -67,15 +89,18 @@ impl<'a> Font<'a> {
             .positioned(self.offset);
         let width = (glyph.position().x + glyph.unpositioned().h_metrics().advance_width) as u32;
 
-        let mut pixel_map = PixelMap::new(width as usize, self.size);
+        let mut pixel_map = PixelMap::new(width as usize, self.height);
         if let Some(bounding_box) = glyph.pixel_bounding_box() {
-            glyph.draw(|mut x, mut y, v| {
+            glyph.draw(|x, y, v| {
                 let alpha = (v * 255.0) as u8;
-                let color = (alpha as u32) << 24 | (alpha as u32) << 16 | (alpha as u32) << 8;
+                if alpha > 0 {
+                    let color = (alpha as u32) << 24 | (alpha as u32) << 16 | (alpha as u32) << 8;
 
-                x += bounding_box.min.x as u32;
-                y += bounding_box.min.y as u32;
-                pixel_map.inner[(x + y * width) as usize] = color;
+                    let x = x as i32 + bounding_box.min.x;
+                    let y = y as i32 + bounding_box.min.y;
+
+                    pixel_map.push(x, y, color);
+                }
             });
         }
 
@@ -83,31 +108,22 @@ impl<'a> Font<'a> {
     }
 
     // Finds the most visually pleasing width to display from a slice of glyphs
-    fn ideal_glyph_width(glyphs: &[PositionedGlyph]) -> usize {
-        glyphs
-            .iter()
-            .rev()
-            .map(|g| g.position().x + g.unpositioned().h_metrics().advance_width)
-            .next()
-            .unwrap_or(0.0) as usize
-    }
+    // fn ideal_glyph_width(glyphs: &[PositionedGlyph]) -> usize {
+    //     glyphs
+    //         .iter()
+    //         .rev()
+    //         .map(|g| g.position().x + g.unpositioned().h_metrics().advance_width)
+    //         .next()
+    //         .unwrap_or(0.0) as usize
+    // }
 }
 
 impl<'a> Default for Font<'a> {
     fn default() -> Self {
-        Self::new(include_bytes!("../../../data/fonts/Roboto-Regular.ttf"), 12).unwrap()
+        Self::new(
+            include_bytes!("../../../data/fonts/open-sans/OpenSans-Regular.ttf"),
+            12,
+        )
+        .unwrap()
     }
 }
-
-// let glyphs: Vec<PositionedGlyph> = font.layout("hello world", scale, offset).collect();
-
-// Find the most visually pleasing width to display
-// let width = glyphs
-//     .iter()
-//     .rev()
-//     .map(|g| g.position().x as f32 + g.unpositioned().h_metrics().advance_width)
-//     .next()
-//     .unwrap_or(0.0) as usize;
-
-// .ceil();
-// }

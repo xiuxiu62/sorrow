@@ -18,6 +18,7 @@ use bootloader_api::{config::Mapping, entry_point, BootInfo, BootloaderConfig};
 use core::{cell::RefCell, panic::PanicInfo};
 use graphics::{Color, GopDevice, GraphicsDevice};
 use mem::{alloc::BootInfoFrameAllocator, heap, MemoryResult};
+use rusttype::Point;
 use terminal::Terminal;
 use x86_64::instructions;
 
@@ -40,31 +41,30 @@ fn main(boot_info: &'static mut BootInfo) -> ! {
 
     // TODO: handle errors
     let runtime = Runtime::new(boot_info).unwrap();
-    let mut terminal = Terminal::new(runtime.gop_device.clone());
+    let mut terminal = Terminal::new(runtime.gop_device.clone(), 32);
     let test_writes = |terminal: &mut Terminal| {
         let mut x_offset = 0;
         let mut y_offset = 0;
         let mut max_height = 0;
-        (0..20).for_each(|_| {
-            "hello world    :)    hello world    :(    hello world"
-                .chars()
-                .for_each(|char| {
-                    let (width, height) = terminal.write_char(x_offset + 10, y_offset + 10, char);
-                    x_offset += width;
-                    max_height = max_height.max(height);
-                });
+        (0..15).for_each(|_| {
+            "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^&*()`~[]{},.<>/?;:'\"-_\\|".chars().for_each(|char| {
+                let Point {
+                    x: width,
+                    y: height,
+                } = terminal.write_char(x_offset as i32 + 10, y_offset as i32 + 10, char);
+                x_offset += width;
+                max_height = max_height.max(height);
+            });
 
             x_offset = 0;
             y_offset += max_height;
         });
     };
 
-    terminal.clear();
-    test_writes(&mut terminal);
-    terminal.clear();
-    test_writes(&mut terminal);
-    terminal.clear();
-    test_writes(&mut terminal);
+    (0..5).for_each(|_| {
+        terminal.clear();
+        test_writes(&mut terminal);
+    });
 
     halt_loop()
 }

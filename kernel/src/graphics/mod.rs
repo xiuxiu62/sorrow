@@ -3,7 +3,7 @@ mod font;
 mod gop;
 
 pub use color::Color;
-pub use font::{Font, PixelMap};
+pub use font::{Font, Pixel, PixelMap};
 pub use gop::GopDevice;
 
 pub trait GraphicsDevice {
