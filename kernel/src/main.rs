@@ -40,27 +40,31 @@ fn main(boot_info: &'static mut BootInfo) -> ! {
 
     // TODO: handle errors
     let runtime = Runtime::new(boot_info).unwrap();
-    // let font = Font::default();
-    // runtime.execute_sync(draw_things);
-    // let terminal = Terminal::new(runtime.gop_device.clone(), font);
-    let terminal = Terminal::new(runtime.gop_device.clone());
+    let mut terminal = Terminal::new(runtime.gop_device.clone());
+    let test_writes = |terminal: &mut Terminal| {
+        let mut x_offset = 0;
+        let mut y_offset = 0;
+        let mut max_height = 0;
+        (0..20).for_each(|_| {
+            "hello world    :)    hello world    :(    hello world"
+                .chars()
+                .for_each(|char| {
+                    let (width, height) = terminal.write_char(x_offset + 10, y_offset + 10, char);
+                    x_offset += width;
+                    max_height = max_height.max(height);
+                });
+
+            x_offset = 0;
+            y_offset += max_height;
+        });
+    };
+
     terminal.clear();
-
-    let mut x_offset = 0;
-    let mut y_offset = 0;
-    let mut max_height = 0;
-    (0..20).for_each(|_| {
-        "hello world    :)    hello world    :(    hello world"
-            .chars()
-            .for_each(|char| {
-                let (width, height) = terminal.write_char(x_offset + 10, y_offset + 10, char);
-                x_offset += width;
-                max_height = max_height.max(height);
-            });
-
-        x_offset = 0;
-        y_offset += max_height;
-    });
+    test_writes(&mut terminal);
+    terminal.clear();
+    test_writes(&mut terminal);
+    terminal.clear();
+    test_writes(&mut terminal);
 
     halt_loop()
 }

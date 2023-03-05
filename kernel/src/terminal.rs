@@ -1,5 +1,5 @@
-use crate::graphics::{Color, Font, GraphicsDevice};
-use alloc::rc::Rc;
+use crate::graphics::{Color, Font, GraphicsDevice, PixelMap};
+use alloc::{collections::BTreeMap, rc::Rc};
 use core::cell::RefCell;
 
 pub struct Terminal<'a> {
@@ -7,6 +7,7 @@ pub struct Terminal<'a> {
     font: Font<'a>,
     background: Color,
     foreground: Color,
+    bitmap_cache: BTreeMap<char, PixelMap>,
 }
 
 impl<'a> Terminal<'a> {
@@ -25,6 +26,7 @@ impl<'a> Terminal<'a> {
             font,
             background,
             foreground,
+            bitmap_cache: BTreeMap::new(),
         }
     }
 
@@ -41,9 +43,19 @@ impl<'a> Terminal<'a> {
     }
 
     // writes a character, returing the width and height of the glyph
-    pub fn write_char(&self, x_offset: usize, y_offset: usize, char: char) -> (usize, usize) {
+    pub fn write_char(&mut self, x_offset: usize, y_offset: usize, char: char) -> (usize, usize) {
         let mut graphics_device_ref = self.graphic_device.borrow_mut();
-        let pixel_map = self.font.rasterize(char);
+        let pixel_map = match self.bitmap_cache.get(&char) {
+            Some(map) => map,
+            None => {
+                let pixel_map = self.font.rasterize(char);
+                self.bitmap_cache.insert(char, pixel_map);
+
+                // UNWRAP: we just inserted this into the map, so we know it exists
+                self.bitmap_cache.get(&char).unwrap()
+            }
+        };
+
         pixel_map
             .as_ref()
             .chunks(pixel_map.width)
@@ -52,8 +64,12 @@ impl<'a> Terminal<'a> {
                 row.iter()
                     .enumerate()
                     .filter(|(_, alpha)| **alpha > 0)
-                    .for_each(|(x, _)| {
-                        graphics_device_ref.set_pixel(x + x_offset, y + y_offset, self.foreground)
+                    .for_each(|(x, pixel)| {
+                        graphics_device_ref.set_pixel(
+                            x + x_offset,
+                            y + y_offset,
+                            Color::Rgb(*pixel),
+                        )
                     });
             });
 
