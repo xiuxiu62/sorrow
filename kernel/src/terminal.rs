@@ -36,7 +36,8 @@ impl<'a> Terminal<'a> {
         self.graphic_device.borrow_mut().fill(self.background);
     }
 
-    pub fn write_char(&self, x_offset: usize, y_offset: usize, char: char) {
+    // writes a character, returing the width and height of the glyph
+    pub fn write_char(&self, x_offset: usize, y_offset: usize, char: char) -> (usize, usize) {
         let mut graphics_device_ref = self.graphic_device.borrow_mut();
         let pixel_map = self.font.rasterize(char);
         pixel_map
@@ -51,5 +52,7 @@ impl<'a> Terminal<'a> {
                         graphics_device_ref.set_pixel(x + x_offset, y + y_offset, self.foreground)
                     });
             });
+
+        (pixel_map.width, pixel_map.height)
     }
 }

@@ -68,11 +68,15 @@ impl<'a> Font<'a> {
 
         let mut pixel_map = PixelMap::new(width as usize, self.size);
         // TODO: calculate offsets from bounding box to avoid clipping pixels
-        // if let Some(bounding_box) = glyph.pixel_bounding_box() {
-        glyph.draw(|x, y, v| {
-            let grayscale = (v * 255.0) as u32;
-            pixel_map.inner[(x + y * width) as usize] = grayscale;
-        });
+        if let Some(bounding_box) = glyph.pixel_bounding_box() {
+            glyph.draw(|mut x, mut y, v| {
+                let grayscale = (v * 255.0) as u32;
+                x += bounding_box.min.x as u32;
+                y += bounding_box.min.y as u32;
+
+                pixel_map.inner[(x + y * width) as usize] = grayscale;
+            });
+        }
 
         pixel_map
     }
