@@ -31,7 +31,7 @@ pub struct Font<'a> {
 
 impl<'a> Font<'a> {
     pub fn new(font_data: &'a [u8], size: usize) -> Option<Self> {
-        rusttype::Font::try_from_bytes(font_data).and_then(|inner| {
+        rusttype::Font::try_from_bytes(font_data).map(|inner| {
             let scale = Scale {
                 x: size as f32,
                 y: size as f32,
@@ -39,12 +39,12 @@ impl<'a> Font<'a> {
             let v_metrics = inner.v_metrics(scale);
             let offset = rusttype::point(0.0, v_metrics.ascent);
 
-            Some(Self {
+            Self {
                 inner,
                 scale,
                 offset,
                 size,
-            })
+            }
         })
     }
 
@@ -74,7 +74,7 @@ impl<'a> Font<'a> {
 
                 pixel_map.inner[(x
                     + bounding_box.min.x as u32
-                    + (y + bounding_box.min.y as u32 as u32) * width)
+                    + (y + bounding_box.min.y as u32) * width)
                     as usize] = alpha;
             });
         }
@@ -87,7 +87,7 @@ impl<'a> Font<'a> {
         glyphs
             .iter()
             .rev()
-            .map(|g| g.position().x as f32 + g.unpositioned().h_metrics().advance_width)
+            .map(|g| g.position().x + g.unpositioned().h_metrics().advance_width)
             .next()
             .unwrap_or(0.0) as usize
     }

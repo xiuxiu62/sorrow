@@ -31,9 +31,9 @@ impl Color {
                 let blue = (value >> 24) as u8 as u32;
                 let green = (value >> 16) as u8 as u32;
                 let red = (value >> 8) as u8 as u32;
-                let alpha = (value >> 0) as u8;
+                let alpha = value as u8;
 
-                (red as u32) << 24 | (green as u32) << 16 | (blue as u32) << 8 | (alpha as u32) << 0
+                red << 24 | green << 16 | blue << 8 | (alpha as u32)
             }
         }
     }
@@ -55,9 +55,9 @@ impl Color {
                 let red = (value >> 24) as u8;
                 let green = (value >> 16) as u8;
                 let blue = (value >> 8) as u8;
-                let alpha = (value >> 0) as u8;
+                let alpha = value as u8;
 
-                (blue as u32) << 24 | (green as u32) << 16 | (red as u32) << 8 | (alpha as u32) << 0
+                (blue as u32) << 24 | (green as u32) << 16 | (red as u32) << 8 | (alpha as u32)
             }
             Self::Bgr(value) => value,
         }

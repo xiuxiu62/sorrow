@@ -1,10 +1,10 @@
 use bootloader_api::info::{MemoryRegionKind, MemoryRegions};
-use linked_list_allocator::LockedHeap;
+
 use x86_64::{
     structures::paging::{
-        mapper::MapToError, FrameAllocator, Mapper, Page, PageTableFlags, PhysFrame, Size4KiB,
+        FrameAllocator, PhysFrame, Size4KiB,
     },
-    PhysAddr, VirtAddr,
+    PhysAddr,
 };
 
 /// A FrameAllocator that returns usable frames from the bootloader's memory map.

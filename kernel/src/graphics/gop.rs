@@ -16,7 +16,7 @@ impl<'a> GraphicsDevice for GopDevice<'a> {
     }
 
     fn height(&self) -> usize {
-        self.width
+        self.height
     }
 
     fn pitch(&self) -> usize {
@@ -38,7 +38,7 @@ impl<'a> GraphicsDevice for GopDevice<'a> {
         self.buffer[offset] = (color >> 24) as u8;
         self.buffer[offset + 1] = (color >> 16) as u8;
         self.buffer[offset + 2] = (color >> 8) as u8;
-        self.buffer[offset + 3] = (color >> 0) as u8;
+        self.buffer[offset + 3] = color as u8;
     }
 
     fn fill(&mut self, color: Color) {
@@ -48,17 +48,17 @@ impl<'a> GraphicsDevice for GopDevice<'a> {
 
 impl<'a> GopDevice<'a> {
     pub fn new(frame_buffer: Option<&'a mut FrameBuffer>) -> Option<Self> {
-        frame_buffer.and_then(|framer_buffer| {
+        frame_buffer.map(|framer_buffer| {
             let info = framer_buffer.info();
 
-            Some(Self {
+            Self {
                 buffer: framer_buffer.buffer_mut(),
                 width: info.width,
                 height: info.height,
                 pitch: info.stride * 4,
                 pixel_bytes: info.bytes_per_pixel,
                 pixel_format: PixelFormat::from(info.pixel_format),
-            })
+            }
         })
     }
 
