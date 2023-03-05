@@ -11,7 +11,11 @@ pub struct Terminal<'a> {
 
 impl<'a> Terminal<'a> {
     pub fn new(graphic_device: Rc<RefCell<dyn GraphicsDevice>>) -> Self {
-        let font = Font::new(include_bytes!("../../data/fonts/Roboto-Regular.ttf"), 40).unwrap();
+        let font = Font::new(
+            include_bytes!("../../data/fonts/open-sans/OpenSans-Regular.ttf"),
+            28,
+        )
+        .unwrap();
         let background = Color::Black;
         let foreground = Color::White;
         graphic_device.borrow_mut().fill(background);
@@ -47,7 +51,7 @@ impl<'a> Terminal<'a> {
             .for_each(|(y, row)| {
                 row.iter()
                     .enumerate()
-                    .filter(|(_, pixel)| **pixel > 0)
+                    .filter(|(_, alpha)| **alpha > 0)
                     .for_each(|(x, _)| {
                         graphics_device_ref.set_pixel(x + x_offset, y + y_offset, self.foreground)
                     });

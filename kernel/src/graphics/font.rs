@@ -1,8 +1,9 @@
 use alloc::vec::Vec;
 use rusttype::{Point, PositionedGlyph, Scale};
 
+// A 2-dimensional map of pixel alphas
 pub struct PixelMap {
-    inner: Vec<u32>,
+    inner: Vec<u8>,
     pub width: usize,
     pub height: usize,
 }
@@ -16,7 +17,7 @@ impl PixelMap {
         }
     }
 
-    pub fn as_ref(&self) -> &[u32] {
+    pub fn as_ref(&self) -> &[u8] {
         &self.inner
     }
 }
@@ -67,14 +68,14 @@ impl<'a> Font<'a> {
         let width = (glyph.position().x + glyph.unpositioned().h_metrics().advance_width) as u32;
 
         let mut pixel_map = PixelMap::new(width as usize, self.size);
-        // TODO: calculate offsets from bounding box to avoid clipping pixels
         if let Some(bounding_box) = glyph.pixel_bounding_box() {
-            glyph.draw(|mut x, mut y, v| {
-                let grayscale = (v * 255.0) as u32;
-                x += bounding_box.min.x as u32;
-                y += bounding_box.min.y as u32;
+            glyph.draw(|x, y, v| {
+                let alpha = (v * 255.0) as u8;
 
-                pixel_map.inner[(x + y * width) as usize] = grayscale;
+                pixel_map.inner[(x
+                    + bounding_box.min.x as u32
+                    + (y + bounding_box.min.y as u32 as u32) * width)
+                    as usize] = alpha;
             });
         }
 

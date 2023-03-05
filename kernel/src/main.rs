@@ -45,27 +45,22 @@ fn main(boot_info: &'static mut BootInfo) -> ! {
     // let terminal = Terminal::new(runtime.gop_device.clone(), font);
     let terminal = Terminal::new(runtime.gop_device.clone());
     terminal.clear();
+
     let mut x_offset = 0;
     let mut y_offset = 0;
-    // "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890+!@#$%^&*()"
-    "hello world".chars().for_each(|char| {
-        let (width, height) = terminal.write_char(x_offset + 10, y_offset + 10, char);
-        x_offset += width;
+    let mut max_height = 0;
+    (0..20).for_each(|_| {
+        "hello world    :)    hello world    :(    hello world"
+            .chars()
+            .for_each(|char| {
+                let (width, height) = terminal.write_char(x_offset + 10, y_offset + 10, char);
+                x_offset += width;
+                max_height = max_height.max(height);
+            });
 
-        // x += 1;
-        // if x == 15 {
-        // x = 0;
-        // y += 1;
-        // };
+        x_offset = 0;
+        y_offset += max_height;
     });
-    // terminal.write_char(0, 0, 'A');
-    // terminal.write_char(50, 0, 'B');
-    // terminal.write_char(100, 0, 'C');
-    // terminal.write_char(150, 0, 'D');
-    // terminal.write_char(200, 0, 'E');
-    // terminal.test_char();
-
-    // runtime.execute_sync(draw_things);
 
     halt_loop()
 }

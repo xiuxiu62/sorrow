@@ -28,7 +28,6 @@ impl<'a> GraphicsDevice for GopDevice<'a> {
     }
 
     fn set_byte(&mut self, i: usize, value: u8) {
-        // let offset = self.pixel_start_offset(i % self.width, i / self.width);
         self.buffer[i] = value;
     }
 
