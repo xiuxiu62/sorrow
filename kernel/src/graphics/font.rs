@@ -77,8 +77,9 @@ impl<'a> Font<'a> {
         };
         let v_metrics = self.inner.v_metrics(scale);
 
-        self.offset = rusttype::point(0.0, v_metrics.ascent);
         self.height = height;
+        self.scale = scale;
+        self.offset = rusttype::point(0.0, v_metrics.ascent);
     }
 
     pub fn rasterize(&self, char: char) -> PixelMap {

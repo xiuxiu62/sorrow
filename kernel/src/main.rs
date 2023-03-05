@@ -35,18 +35,29 @@ fn main(boot_info: &'static mut BootInfo) -> ! {
     #[cfg(test)]
     test_run();
 
-    // let frame_buffer = core::mem::take(boot_info.framebuffer.as_mut());
-    // initialize_hardware(boot_info).unwrap();
-    // let gop_device = Rc::new(RefCell::new(GopDevice::new(frame_buffer).unwrap()));
-
     // TODO: handle errors
     let runtime = Runtime::new(boot_info).unwrap();
-    let mut terminal = Terminal::new(runtime.gop_device.clone(), 32);
-    let test_writes = |terminal: &mut Terminal| {
-        let mut x_offset = 0;
-        let mut y_offset = 0;
-        let mut max_height = 0;
-        (0..15).for_each(|_| {
+    let mut terminal = Terminal::new(runtime.gop_device.clone(), 20);
+
+    (0..5).for_each(|_| {
+        terminal.clear();
+        test_writes(&mut terminal);
+    });
+
+    terminal.update_font_size(36);
+    (0..5).for_each(|_| {
+        terminal.clear();
+        test_writes(&mut terminal);
+    });
+
+    halt_loop()
+}
+
+fn test_writes(terminal: &mut Terminal) {
+    let mut x_offset = 0;
+    let mut y_offset = 0;
+    let mut max_height = 0;
+    (0..20).for_each(|_| {
             "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^&*()`~[]{},.<>/?;:'\"-_\\|".chars().for_each(|char| {
                 let Point {
                     x: width,
@@ -59,51 +70,11 @@ fn main(boot_info: &'static mut BootInfo) -> ! {
             x_offset = 0;
             y_offset += max_height;
         });
-    };
-
-    (0..5).for_each(|_| {
-        terminal.clear();
-        test_writes(&mut terminal);
-    });
-
-    halt_loop()
-}
-
-fn draw_things(runtime: &mut Runtime) {
-    runtime.gop_device.borrow_mut().fill(Color::Black);
-
-    // runtime.gop_device.fill(Color::Purple);
-    // (0..12).for_each(|x| {
-    // (0..7).for_each(|y| {
-    // runtime.gop_device.borrow_mut().draw_square(
-    // x * 100 + 50,
-    // y * 100 + 50,
-    // 50,
-    // Color::Black,
-    // )
-    // })
-    // });
 }
 
 struct Runtime {
-    // memory_mapper: OffsetPageTable<'a>,
-    // allocator: Box<dyn FrameAllocator<Size4KiB>>,
-    // gop_device: GopDevice<'a>,
     gop_device: Rc<RefCell<dyn GraphicsDevice>>,
 }
-
-// pub fn initialize_hardware(boot_info: &'static BootInfo) -> MemoryResult<()> {
-//     gdt::initialize();
-//     idt::initialize();
-//     let mut memory_mapper = unsafe { mem::initialize(boot_info.physical_memory_offset.as_ref())? };
-//     let mut frame_allocator = unsafe { BootInfoFrameAllocator::new(&boot_info.memory_regions) };
-//     heap::initialize(&mut memory_mapper, &mut frame_allocator)?;
-//     let gop_device = Rc::new(RefCell::new(
-//         GopDevice::new(boot_info.framebuffer.as_mut()).unwrap(),
-//     ));
-
-//     Ok(())
-// }
 
 impl Runtime {
     fn new(boot_info: &'static mut BootInfo) -> MemoryResult<Self> {
@@ -118,10 +89,6 @@ impl Runtime {
         ));
 
         Ok(Self { gop_device })
-    }
-
-    fn execute_sync(&mut self, f: fn(&mut Self)) {
-        f(self)
     }
 }
 

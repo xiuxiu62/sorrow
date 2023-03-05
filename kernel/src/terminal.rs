@@ -9,15 +9,13 @@ pub struct Terminal<'a> {
     background: Color,
     foreground: Color,
     font_size: usize,
-    pixel_map_cache: BTreeMap<char, PixelMap>,
+    render_cache: BTreeMap<char, PixelMap>,
 }
 
 impl<'a> Terminal<'a> {
     pub fn new(graphic_device: Rc<RefCell<dyn GraphicsDevice>>, font_size: usize) -> Self {
         let font = Font::new(
             include_bytes!("../../data/fonts/open-sans/OpenSans-Regular.ttf"),
-            // include_bytes!("../../data/fonts/Roboto-Regular.ttf"),
-            // include_bytes!("../../data/fonts/8-bit.ttf"),
             font_size,
         )
         .unwrap();
@@ -31,8 +29,13 @@ impl<'a> Terminal<'a> {
             background,
             foreground,
             font_size,
-            pixel_map_cache: BTreeMap::new(),
+            render_cache: BTreeMap::new(),
         }
+    }
+
+    pub fn update_font_size(&mut self, font_size: usize) {
+        self.render_cache.clear();
+        self.font.update_height(font_size);
     }
 
     pub fn width(&self) -> usize {
@@ -47,20 +50,19 @@ impl<'a> Terminal<'a> {
         self.graphic_device.borrow_mut().fill(self.background);
     }
 
-    // writes a character, returing the dimensions of the glyph
+    // writes a character, returing the dimensions of the glyph so we can calcualte offsets for the next character
     pub fn write_char(&mut self, x_offset: i32, y_offset: i32, char: char) -> Point<usize> {
         let mut graphics_device_ref = self.graphic_device.borrow_mut();
-        let pixel_map = match self.pixel_map_cache.get(&char) {
+        let pixel_map = match self.render_cache.get(&char) {
             Some(map) => map,
             None => {
                 let pixel_map = self.font.rasterize(char);
-                self.pixel_map_cache.insert(char, pixel_map);
+                self.render_cache.insert(char, pixel_map);
 
                 // UNWRAP: we just inserted this into the map, so we know it exists
-                self.pixel_map_cache.get(&char).unwrap()
+                self.render_cache.get(&char).unwrap()
             }
         };
-        // let pixel_map = self.font.rasterize(char);
 
         pixel_map.iter().for_each(|Pixel { position, color }| {
             let x = (position.x + x_offset) as usize;

@@ -41,8 +41,6 @@ pub unsafe fn translate_address(
     address: VirtAddr,
     physical_memory_offset: VirtAddr,
 ) -> Result<PhysAddr> {
-    // fn translate_addr_inner(addr: VirtAddr, physical_memory_offset: VirtAddr) -> Option<PhysAddr> {
-    // read the active level 4 frame from the CR3 register
     let (level_4_table_frame, _cr3_flags) = Cr3::read();
 
     let table_indexes = [
@@ -54,7 +52,6 @@ pub unsafe fn translate_address(
     let mut frame = level_4_table_frame;
 
     // traverse the multi-level page table
-
     for index in table_indexes {
         // convert the frame into a page table reference
         let virt = physical_memory_offset + frame.start_address().as_u64();
