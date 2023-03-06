@@ -22,22 +22,6 @@ pub fn initialize(graphics_device: Rc<RefCell<dyn GraphicsDevice>>) {
 #[doc(hidden)]
 pub fn print(args: fmt::Arguments) {
     TERMINAL.lock().as_mut().unwrap().write_fmt(args).unwrap();
-    // let mut x_offset = 0;
-    // let y_offset = 0;
-    // let mut max_height = 0;
-
-    // data.chars().for_each(|char| {
-    //     let Point {
-    //         x: width,
-    //         y: height,
-    //     } = TERMINAL.lock().as_ref().unwrap().write_char(
-    //         x_offset as i32 + 10,
-    //         y_offset as i32 + 10,
-    //         char,
-    //     );
-    //     x_offset += width;
-    //     max_height = max_height.max(height);
-    // });
 }
 
 pub fn clear() {
@@ -54,13 +38,13 @@ macro_rules! clear {
 #[macro_export]
 macro_rules! print {
     () => ($crate::terminal::print(""));
-    ($($arg:tt),*) => ($crate::terminal::print(format_args!($($arg)*)));
+    ($($arg:tt)*) => ($crate::terminal::print(format_args!($($arg)*)));
 }
 
 #[macro_export]
 macro_rules! println {
     () => ($crate::print!("\n"));
-    ($($arg:tt),*) => ($crate::print!("{args}\n", format_args!($($arg)*)));
+    ($($arg:tt)*) => ($crate::print!("{}\n", format_args!($($arg)*)));
 }
 
 pub struct Terminal<'a> {
@@ -101,36 +85,39 @@ impl<'a> Terminal<'a> {
     fn line_height(&self) -> usize {
         self.backend.font.height()
     }
+
+    fn newline(&mut self) {
+        self.cursor.x = 0;
+        self.cursor.y += self.line_height();
+    }
 }
 
 impl<'a> core::fmt::Write for Terminal<'a> {
     fn write_fmt(mut self: &mut Self, args: fmt::Arguments<'_>) -> fmt::Result {
-        // let temp = format_args!("{}", args).as_str().unwrap();
-        // temp.as_str().unwrap()
         fmt::write(&mut self, args)
-
-        // self.write_str(format_args!("{}", args).as_str().unwrap())
     }
 
     fn write_str(&mut self, data: &str) -> fmt::Result {
-        // for char in data.chars() {
-        // self.write_char()
-        // }
         data.chars().try_for_each(|char| self.write_char(char))
     }
 
     fn write_char(&mut self, char: char) -> fmt::Result {
-        let pixel_map = self.backend.render_character(char);
-        let glyph_width = pixel_map.dimensions.x;
-        if self.cursor.x + pixel_map.dimensions.x > self.size.x {
-            self.cursor.x = 0;
-            // TODO: scroll if we're at the bottom of the terminal
-            self.cursor.y += self.line_height();
-        }
+        match char {
+            '\n' => self.newline(),
+            _ => {
+                let pixel_map = self.backend.render_character(char);
+                let glyph_width = pixel_map.dimensions.x;
+                if self.cursor.x + pixel_map.dimensions.x > self.size.x {
+                    self.cursor.x = 0;
+                    // TODO: scroll if we're at the bottom of the terminal
+                    self.cursor.y += self.line_height();
+                }
 
-        self.backend
-            .write_character(pixel_map, self.cursor.x as i32, self.cursor.y as i32);
-        self.cursor.x += glyph_width;
+                self.backend
+                    .write_character(pixel_map, self.cursor.x as i32, self.cursor.y as i32);
+                self.cursor.x += glyph_width;
+            }
+        }
 
         Ok(())
     }

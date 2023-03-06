@@ -35,10 +35,10 @@ fn main(boot_info: &'static mut BootInfo) -> ! {
 
     // TODO: handle errors
     initialize_hardware(boot_info).unwrap();
-
     clear!();
+
     for _ in 0..20 {
-        print!("hello world");
+        println!("hello world");
     }
 
     halt_loop()
