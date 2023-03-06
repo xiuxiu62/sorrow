@@ -22,6 +22,7 @@ use x86_64::instructions;
 
 pub static BOOTLOADER_CONFIG: BootloaderConfig = {
     let mut config = BootloaderConfig::new_default();
+    // config.kernel_stack_size = 1024 * 1000 * 1000;
     config.mappings.physical_memory = Some(Mapping::Dynamic);
 
     config
@@ -37,9 +38,9 @@ fn main(boot_info: &'static mut BootInfo) -> ! {
     initialize_hardware(boot_info).unwrap();
     clear!();
 
-    for _ in 0..20 {
-        println!("hello world");
-    }
+    println!("/home/xiuxiu/documents > ls");
+    println!("test.txt");
+    println!("hello-world.txt");
 
     halt_loop()
 }

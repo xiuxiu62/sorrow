@@ -123,12 +123,12 @@ impl<'a> Font<'a> {
     // }
 }
 
-impl<'a> Default for Font<'a> {
-    fn default() -> Self {
-        Self::new(
-            include_bytes!("../../../data/fonts/open-sans/OpenSans-Regular.ttf"),
-            12,
-        )
-        .unwrap()
-    }
-}
+// impl<'a> Default for Font<'a> {
+//     fn default() -> Self {
+//         Self::new(
+//             include_bytes!("../../../data/fonts/open-sans/OpenSans-Regular.ttf"),
+//             12,
+//         )
+//         .unwrap()
+//     }
+// }

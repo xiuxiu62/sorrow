@@ -146,6 +146,7 @@ impl<'a> TerminalBackend<'a> {
 
         let font = Font::new(
             include_bytes!("../../data/fonts/open-sans/OpenSans-Regular.ttf"),
+            // include_bytes!("../../data/fonts/unifont-15.0.01.otf"),
             font_size,
         )
         .unwrap();
