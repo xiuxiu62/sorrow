@@ -16,10 +16,8 @@ extern crate alloc;
 use alloc::rc::Rc;
 use bootloader_api::{config::Mapping, entry_point, BootInfo, BootloaderConfig};
 use core::{cell::RefCell, panic::PanicInfo};
-use graphics::{Color, GopDevice, GraphicsDevice};
+use graphics::GopDevice;
 use mem::{alloc::BootInfoFrameAllocator, heap, MemoryResult};
-use rusttype::Point;
-use terminal::Terminal;
 use x86_64::instructions;
 
 pub static BOOTLOADER_CONFIG: BootloaderConfig = {
@@ -36,60 +34,28 @@ fn main(boot_info: &'static mut BootInfo) -> ! {
     test_run();
 
     // TODO: handle errors
-    let runtime = Runtime::new(boot_info).unwrap();
-    let mut terminal = Terminal::new(runtime.gop_device.clone(), 20);
+    initialize_hardware(boot_info).unwrap();
 
-    (0..5).for_each(|_| {
-        terminal.clear();
-        test_writes(&mut terminal);
-    });
-
-    terminal.update_font_size(36);
-    (0..5).for_each(|_| {
-        terminal.clear();
-        test_writes(&mut terminal);
-    });
+    clear!();
+    for _ in 0..20 {
+        print!("hello world");
+    }
 
     halt_loop()
 }
 
-fn test_writes(terminal: &mut Terminal) {
-    let mut x_offset = 0;
-    let mut y_offset = 0;
-    let mut max_height = 0;
-    (0..20).for_each(|_| {
-            "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^&*()`~[]{},.<>/?;:'\"-_\\|".chars().for_each(|char| {
-                let Point {
-                    x: width,
-                    y: height,
-                } = terminal.write_char(x_offset as i32 + 10, y_offset as i32 + 10, char);
-                x_offset += width;
-                max_height = max_height.max(height);
-            });
+fn initialize_hardware(boot_info: &'static mut BootInfo) -> MemoryResult<()> {
+    gdt::initialize();
+    idt::initialize();
+    let mut memory_mapper = unsafe { mem::initialize(boot_info.physical_memory_offset.as_ref())? };
+    let mut frame_allocator = unsafe { BootInfoFrameAllocator::new(&boot_info.memory_regions) };
+    heap::initialize(&mut memory_mapper, &mut frame_allocator)?;
+    let gop_device = Rc::new(RefCell::new(
+        GopDevice::new(boot_info.framebuffer.as_mut()).unwrap(),
+    ));
+    crate::terminal::initialize(gop_device);
 
-            x_offset = 0;
-            y_offset += max_height;
-        });
-}
-
-struct Runtime {
-    gop_device: Rc<RefCell<dyn GraphicsDevice>>,
-}
-
-impl Runtime {
-    fn new(boot_info: &'static mut BootInfo) -> MemoryResult<Self> {
-        gdt::initialize();
-        idt::initialize();
-        let mut memory_mapper =
-            unsafe { mem::initialize(boot_info.physical_memory_offset.as_ref())? };
-        let mut frame_allocator = unsafe { BootInfoFrameAllocator::new(&boot_info.memory_regions) };
-        heap::initialize(&mut memory_mapper, &mut frame_allocator)?;
-        let gop_device = Rc::new(RefCell::new(
-            GopDevice::new(boot_info.framebuffer.as_mut()).unwrap(),
-        ));
-
-        Ok(Self { gop_device })
-    }
+    Ok(())
 }
 
 pub fn halt_loop() -> ! {

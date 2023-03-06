@@ -13,8 +13,6 @@ pub trait GraphicsDevice {
     fn pixel_bytes(&self) -> usize;
 
     fn set_byte(&mut self, offset: usize, value: u8);
-    // fn set_byte(&mut self, x: usize, y: usize, value: u8);
     fn set_pixel(&mut self, x: usize, y: usize, color: Color);
-
     fn fill(&mut self, color: Color);
 }

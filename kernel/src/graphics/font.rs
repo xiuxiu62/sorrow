@@ -2,7 +2,7 @@ use alloc::{slice, vec::Vec};
 use rusttype::{Point, Scale};
 
 // A 2-dimensional map of grayscale pixels
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PixelMap {
     pub dimensions: Point<usize>,
     inner: Vec<Pixel>,
@@ -28,7 +28,7 @@ impl PixelMap {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Pixel {
     pub position: Point<i32>,
     pub color: u32,
@@ -106,6 +106,10 @@ impl<'a> Font<'a> {
         }
 
         pixel_map
+    }
+
+    pub fn height(&self) -> usize {
+        self.height
     }
 
     // Finds the most visually pleasing width to display from a slice of glyphs
