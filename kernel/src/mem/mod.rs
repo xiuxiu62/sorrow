@@ -59,11 +59,7 @@ pub unsafe fn translate_address(
         let table = unsafe { &*table_ptr };
 
         // read the page table entry and update `frame`
-        let entry = &table[index];
-        frame = match entry.frame() {
-            Ok(frame) => frame,
-            Err(error) => return Err(Error::Frame(FrameError::new(error, address))),
-        };
+        frame = table[index].frame()?;
     }
 
     // calculate the physical address by adding the page offset

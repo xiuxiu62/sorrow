@@ -4,6 +4,7 @@
 #![test_runner(crate::test_runner)]
 #![reexport_test_harness_main = "test_run"]
 
+mod device;
 mod gdt;
 mod graphics;
 mod idt;
@@ -36,7 +37,6 @@ fn main(boot_info: &'static mut BootInfo) -> ! {
 
     // TODO: handle errors
     initialize_hardware(boot_info).unwrap();
-    clear!();
 
     println!("/home/xiuxiu/documents > ls");
     println!("test.txt");

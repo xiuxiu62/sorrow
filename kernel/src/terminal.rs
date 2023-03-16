@@ -1,5 +1,13 @@
 use crate::graphics::{Color, Font, GraphicsDevice, Pixel, PixelMap};
-use alloc::{collections::BTreeMap, rc::Rc, sync::Arc};
+use alloc::{
+    borrow::ToOwned,
+    boxed::Box,
+    collections::{BTreeMap, LinkedList},
+    rc::Rc,
+    string::String,
+    sync::Arc,
+    vec::Vec,
+};
 use core::{
     cell::{RefCell, RefMut},
     fmt::{self, Write},
@@ -17,6 +25,7 @@ lazy_static! {
 
 pub fn initialize(graphics_device: Rc<RefCell<dyn GraphicsDevice>>) {
     *TERMINAL.lock() = Some(Terminal::new(graphics_device, DEFAULT_FONT_SIZE));
+    clear();
 }
 
 #[doc(hidden)]
@@ -24,6 +33,7 @@ pub fn print(args: fmt::Arguments) {
     TERMINAL.lock().as_mut().unwrap().write_fmt(args).unwrap();
 }
 
+#[doc(hidden)]
 pub fn clear() {
     TERMINAL.lock().as_ref().unwrap().clear();
 }
@@ -54,6 +64,10 @@ pub struct Terminal<'a> {
     foreground: Color,
     font_size: usize,
     backend: TerminalBackend<'a>,
+
+    prompt: String,
+    command: String,
+    back_buffer: TerminalBackBuffer,
 }
 
 impl<'a> Terminal<'a> {
@@ -75,6 +89,10 @@ impl<'a> Terminal<'a> {
             foreground: Color::White,
             font_size,
             backend,
+
+            prompt: "".to_owned(),
+            command: "".to_owned(),
+            back_buffer: TerminalBackBuffer::default(),
         }
     }
 
@@ -204,3 +222,52 @@ impl<'a> TerminalBackend<'a> {
 
 // SAFETY: Terminals will only exist as static references behind a mutex and will need to be locked for access
 unsafe impl<'a> Send for TerminalBackend<'a> {}
+
+pub struct Span<T: PartialEq + PartialOrd> {
+    pub start: T,
+    pub end: T,
+}
+
+impl<T: PartialEq + PartialOrd> Span<T> {
+    pub fn new(start: T, end: T) -> Self {
+        Self { start, end }
+    }
+}
+
+struct TerminalBackBuffer {
+    history: Capped<LinkedList<Box<str>>>,
+    buffer: Capped<Vec<Box<str>>>,
+}
+
+impl TerminalBackBuffer {
+    pub fn new(history_capacity: usize, buffer_capacity: usize) -> Self {
+        Self {
+            history: (history_capacity, LinkedList::new()),
+            buffer: (buffer_capacity, vec![]),
+        }
+    }
+
+    pub fn push_command(&mut self, prompt: String, command: String) {
+        // Remove a line from the back of the buffer if it's full
+        if self.buffer.1.len() > self.buffer.0 {
+            self.buffer.1.remove(0);
+        }
+        self.buffer
+            .1
+            .push(format!("{prompt}{command}").into_boxed_str());
+
+        // Remove a command from history if it's full
+        if self.history.1.len() == self.history.0 {
+            self.history.1.pop_front();
+        }
+        self.history.1.push_back(command.into_boxed_str())
+    }
+}
+
+impl Default for TerminalBackBuffer {
+    fn default() -> Self {
+        Self::new(250, 50)
+    }
+}
+
+type Capped<T> = (usize, T);

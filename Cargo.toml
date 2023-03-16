@@ -13,7 +13,6 @@ members = ["kernel"]
 [build-dependencies]
 bootloader = "0.11" 
 kernel = { path = "kernel", artifact = "bin", target = "x86_64-unknown-none" }
-# kernel = { path = "kernel", artifact = "bin" }
 
 # [build-dependencies.kernel]
 # path = "kernel"
@@ -21,10 +20,8 @@ kernel = { path = "kernel", artifact = "bin", target = "x86_64-unknown-none" }
 # target = "x86_64-unknown-none"
 
 [dependencies]
-fontdue = { version = "0.7.2", default-features = false }
 # used for UEFI booting in QEMU
 ovmf-prebuilt = "0.1.0-alpha.1"
-ttf-parser = { version = "0.18.1", default-features = false }
 
 # [profile.dev]
 # panic = "abort"

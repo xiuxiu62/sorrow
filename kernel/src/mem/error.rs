@@ -1,86 +1,61 @@
-use x86_64::{
-    structures::paging::{mapper::MapToError, page_table, Size4KiB},
-    VirtAddr,
-};
+use core::fmt::Display;
+use thiserror::Error;
+use x86_64::structures::paging::{mapper, page_table, PageSize, Size4KiB};
 
 pub type Result<T> = core::result::Result<T, Error>;
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum Error {
+    #[error(transparent)]
     Frame(FrameError),
-    Map(MapToError<Size4KiB>),
-    PhysicalMemoryOffset(PhysicalMemoryOffsetError),
+    #[error(transparent)]
+    MapTo(MapToError<Size4KiB>),
+    #[error(transparent)]
+    PhysicalMemoryOffset(#[from] PhysicalMemoryOffsetError),
 }
 
-impl From<FrameError> for Error {
-    fn from(value: FrameError) -> Self {
-        Self::Frame(value)
+impl From<page_table::FrameError> for Error {
+    fn from(value: page_table::FrameError) -> Self {
+        Self::Frame(FrameError::from(value))
     }
 }
 
-impl From<MapToError<Size4KiB>> for Error {
-    fn from(value: MapToError<Size4KiB>) -> Self {
-        Self::Map(value)
+impl From<mapper::MapToError<Size4KiB>> for Error {
+    fn from(value: mapper::MapToError<Size4KiB>) -> Self {
+        Self::MapTo(MapToError::from(value))
     }
 }
 
-impl From<PhysicalMemoryOffsetError> for Error {
-    fn from(value: PhysicalMemoryOffsetError) -> Self {
-        Self::PhysicalMemoryOffset(value)
+#[derive(Debug, Error)]
+pub struct FrameError(page_table::FrameError);
+
+impl From<page_table::FrameError> for FrameError {
+    fn from(value: page_table::FrameError) -> Self {
+        Self(value)
     }
 }
 
-impl core::fmt::Display for Error {
+impl Display for FrameError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            Self::Frame(err) => write!(f, "{err}"),
-            Self::Map(err) => write!(f, "{err:#?}"),
-            Self::PhysicalMemoryOffset(err) => write!(f, "{err}"),
-        }
-    }
-}
-
-impl core::error::Error for Error {}
-
-#[derive(Debug)]
-pub struct FrameError {
-    error: page_table::FrameError,
-    address: VirtAddr,
-}
-
-impl FrameError {
-    pub fn new(error: page_table::FrameError, address: VirtAddr) -> Self {
-        Self { error, address }
-    }
-}
-
-impl From<(page_table::FrameError, VirtAddr)> for FrameError {
-    fn from((error, address): (page_table::FrameError, VirtAddr)) -> Self {
-        Self { error, address }
-    }
-}
-
-impl core::fmt::Display for FrameError {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        let address = self.address.as_u64();
-        let description = match self.error {
+        let description = match self.0 {
             page_table::FrameError::FrameNotPresent => "frame not present",
             page_table::FrameError::HugeFrame => "huge pages not supported",
         };
 
-        write!(f, "Frame error at virtual address {address}: {description}")
+        write!(f, "Frame error: {description}")
     }
 }
 
-impl core::error::Error for FrameError {}
+#[derive(Debug, Error)]
+#[error("{0:?}")]
+pub struct MapToError<S: PageSize>(mapper::MapToError<S>);
 
-#[derive(Debug)]
+impl<S: PageSize> From<mapper::MapToError<S>> for MapToError<S> {
+    fn from(value: mapper::MapToError<S>) -> Self {
+        Self(value)
+    }
+}
+
+#[derive(Debug, Error)]
+#[error("Physical memory offset not set")]
 pub struct PhysicalMemoryOffsetError;
-
-impl core::fmt::Display for PhysicalMemoryOffsetError {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "Physical memory offset not set")
-    }
-}
-
-impl core::error::Error for PhysicalMemoryOffsetError {}
